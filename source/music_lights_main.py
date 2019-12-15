@@ -1,4 +1,5 @@
 import sounddevice as sd
+import numpy as np
 
 import dsp
 import light
@@ -15,6 +16,12 @@ tree = sim.ChristmasTreeSim(N_lights)  # start the simulation of the tree
 
 brightnesses = [10] * N_lights
 update_display = False
+
+audio_gain = 10
+P_COEFF = 100
+TARGET_LEVEL = 1e2
+AUTOGAIN_T = 10  # timeframe over which averages are taken for auto gain adjustment
+sound_amplitudes = np.zeros(np.floor((AUTOGAIN_T * 1000) / BLOCK_DUR).astype(int))  # circular buffer of arrays
 
 def callback(indata, frames, time, status):
     """captures the audio at regular intervals and processes it as required"""
@@ -35,6 +42,15 @@ def callback(indata, frames, time, status):
 
     else:
         print('no input', flush=True)
+
+def update_gain(rms_amplitude, ):
+    """function for adaptive audio gain"""
+
+    # first add the new amplitude to the circular buffer
+    sound_amplitudes[0] = rms_amplitude
+    np.roll(sound_amplitudes, 1)
+
+    print(dsp.rms(sound_amplitudes))
 
 
 if __name__ == "__main__":

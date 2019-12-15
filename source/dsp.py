@@ -1,5 +1,5 @@
 import numpy as np
-
+import math
 
 def fourier(data, samplerate, gain=1000):
     """Computes the fourier transform for a given input"""
@@ -42,7 +42,7 @@ def detect_beat(audio, change_thresh):
     # calculate RMS mean (volume level) over sub intervals of the sample
     rms_means = [0] * SPLIT
     for n in range(SPLIT):
-        rms_means[n] = np.sum(np.square(audio[int(sec_len * n):int(sec_len * (n + 1))]))
+        rms_means[n] = rms(audio[int(sec_len * n):int(sec_len * (n + 1))])
 
     rms_differences = [(rms_means[i] - rms_means[i - 1]) for i in range(1, SPLIT)]
     total_mean = np.sum(rms_means) / SPLIT
@@ -51,3 +51,7 @@ def detect_beat(audio, change_thresh):
         return True
     else:
         return False
+
+def rms(arr):
+    """calculates the RMS mean of the numpy array arr"""
+    return math.sqrt(np.sum(np.square(arr)))
