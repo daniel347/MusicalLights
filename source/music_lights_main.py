@@ -6,29 +6,41 @@ import dsp
 import light
 import christmas_tree_sim as sim
 
-# speed profiling
+# ========PROFILING========
 pr = cProfile.Profile()
 pr.disable()
+# =========================
 
-DEV_ID = -1
-BLOCK_DUR = 50  # by default, take 50ms chunks and feed them into the Fourier transform
-
+# ========LIGHTS========
 light_freq_ranges = [(50, 200), (200, 300), (300, 400), (400, 650), (650, 1000)]
 N_lights = len(light_freq_ranges)
-MAX_FOURIER = 255  # TODO : unify gains into only the one adaptive one
+MAX_FOURIER = 255
+MODE = light.Mode.freq_range  # options are in the Enum class within light.py
+LOW_THRESH = 25
+DECAY_RATE = 25
 
-# make a light class instance for every frequency range
-lights = [light.Light(1, r, MAX_FOURIER, 0) for r in light_freq_ranges]
-tree = sim.ChristmasTreeSim(N_lights)  # start the simulation of the tree
+# This list defines the hardware configuration of lights and how they should react to the sound.
+# see light class for options and parameters.
+lights = [light.Light(1, light.Mode.freq_range, LOW_THRESH, DECAY_RATE) for i in N_lights]
+# ======================
 
+# ========SIMULATION========
 brightnesses = [10] * N_lights
+tree = sim.ChristmasTreeSim(N_lights)  # start the simulation of the tree
 update_display = False
+# ==========================
+
+
+# ========AUDIO PARAMETERS========
+DEV_ID = -1
+BLOCK_DUR = 50  # by default, take 50ms chunks and feed them into the Fourier transform
 
 audio_gain = 100
 P_COEFF = 1
 TARGET_LEVEL = 3
 AUTOGAIN_T = 10  # time frame in seconds over which averages are taken for auto gain adjustment
 sound_amplitudes = np.zeros(np.floor((AUTOGAIN_T * 1000) / BLOCK_DUR).astype(int))  # circular buffer of arrays
+# ================================
 
 stop_callback = False
 
@@ -70,12 +82,14 @@ def update_gain(rms_amplitude):
 
 if __name__ == "__main__":
 
+    # /////////////////////////////////
+    # Set up audio recording parameters
     if (DEV_ID < 0):
         DEV_ID = sd.default.device["input"]
-        print(DEV_ID)
 
     samplerate = sd.query_devices(DEV_ID)['default_samplerate']
     blocksize = int((samplerate * BLOCK_DUR) / 1000)
+    # /////////////////////////////////
 
     tree.draw_tree(brightnesses)
 

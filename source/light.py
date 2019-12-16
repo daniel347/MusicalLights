@@ -27,8 +27,6 @@ class Light:
         self.MIN_LOUDNESS = min_loudness
         self.LOUDNESS_GRAD = loudness_gradient
 
-
-
     def set_brightness(self, fourier=None, freqs=None, beat=False, loudness=None):
         """"Sets a new brightness for the light, based on the parameters set up in init and the audio input
         For decay, it is assumed that set_brightness is called at regular intervals"""
