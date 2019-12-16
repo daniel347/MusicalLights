@@ -1,6 +1,8 @@
 import sounddevice as sd
 import numpy as np
 import cProfile
+from tkinter import *
+from tkinter.ttk import *
 
 import dsp
 import light
@@ -63,6 +65,8 @@ sound_amplitudes = np.zeros(np.floor((AUTOGAIN_T * 1000) / BLOCK_DUR).astype(int
 
 stop_callback = False
 
+
+
 def callback(indata, frames, time, status):
     """captures the audio at regular intervals and processes it as required"""
     global update_lights
@@ -103,6 +107,52 @@ def update_gain(rms_amplitude):
 
 
 if __name__ == "__main__":
+
+    # ========GUI========
+    window = Tk()
+    window.title("Musical Lights")
+    window.geometry('650x400')
+
+    mode_label = Label(window, text="Mode")
+    mode_label.grid(column=0, row=0)
+
+    mode_dropdown = Combobox(window)
+    mode_dropdown['values'] = ("Frequency Range", "Loudness")
+    mode_dropdown.current(1)
+    mode_dropdown.grid(column=1, row=0)
+
+    freq_range_title = Label(window, text="Light Frequency Ranges")
+    freq_range_title.grid(column=0, row=2)
+
+    light_freq_guis = []
+    for i, range in enumerate(light_freq_ranges):
+        low_range = Spinbox(window, from_=0, to=2000, width=50, textvariable=IntVar().set(range[0]))
+        low_range.grid(column=0, row=(3 + i))
+
+        light_name = Label(window, text=("Light " + str(i)))
+        light_name.grid(column=1, row=(3 + i))
+
+        high_range = Spinbox(window, from_=0, to=2000, width=50, textvariable=IntVar().set(range[1]))
+        high_range.grid(column=2, row=(3 + i))
+
+        light_freq_guis.append((light_name, low_range, high_range))
+
+    loudness_title = Label(window, text="Loudness Cut-offs")
+    loudness_title.grid(column=0, row=4 + N_lights)
+
+    light_loudness_guis = []
+    for i, loudness in enumerate(loudness_levels):
+        light_name = Label(window, text=("Light " + str(i)))
+        light_name.grid(column=0, row=(6 + N_lights + i))
+
+        l = Scale(window, label="Test", orient=HORIZONTAL, length=100, from_=0.0, to=20.0)
+        l.grid(column=1, row=(6 +  N_lights + i))
+
+        light_loudness_guis.append((light_name, l))
+
+    window.mainloop()
+
+
 
     # /////////////////////////////////
     # Set up audio recording parameters
