@@ -1,3 +1,6 @@
+import enum
+
+
 class Light:
 
     def __init__(self, pin, mode, low_thresh, decay_rate):
@@ -11,6 +14,7 @@ class Light:
 
         # mode control enum - NB: main must run the appropriate setup function after init
         self.mode = mode
+        print(self.mode)
 
     def setup_freq_range_mode(self, freq_range, max_fourier, beat_inc):
         """set parameters for frequency range mode operation"""
