@@ -1,10 +1,10 @@
 import numpy as np
 import math
 
-def fourier(data, samplerate, gain=1000):
+def fourier(data, samplerate):
     """Computes the fourier transform for a given input"""
 
-    fft = np.abs(np.fft.rfft(data, norm="ortho")) * gain
+    fft = np.abs(np.fft.rfft(data, norm="ortho"))
     frequencies = np.fft.rfftfreq(len(data), 1.0 / samplerate)
 
     return fft, frequencies
@@ -54,4 +54,4 @@ def detect_beat(audio, change_thresh):
 
 def rms(arr):
     """calculates the RMS mean of the numpy array arr"""
-    return math.sqrt(np.sum(np.square(arr)))
+    return math.sqrt(np.sum(np.square(arr))/len(arr))
