@@ -41,4 +41,22 @@ class Light:
         """"Ouput a pwm to the GPIO pin to control the light"""
         pass
 
+    def fourier_brightness_component(self, fourier, freqs):
+        """Calculates the power over the frequency range of the light"""
+
+        freq_power = 0  # power over the frequency range of the light
+        num_freq = 0  # number of frequencies used in mean
+
+        for fft, f in zip(fourier, freqs):
+            if self.freq_range[0] <= f < self.freq_range[1]:  # this frequency is in the range of this light
+                freq_power += fft
+                num_freq += 1
+            if f > self.freq_range[1]:  # we have passed the range therefore no need to look any further
+                break
+
+        return int(round((freq_power/num_freq) * self.fourier_scale))
+
+    def loudness_brightness_component(self, loudness):
+
+
     # TODO : add in multiple modes - eg one shwoing loudness as height in the tree
