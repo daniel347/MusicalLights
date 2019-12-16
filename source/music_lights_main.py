@@ -16,7 +16,9 @@ BLOCK_DUR = 50  # by default, take 50ms chunks and feed them into the Fourier tr
 light_freq_ranges = [(50, 200), (200, 300), (300, 400), (400, 650), (650, 1000)]
 N_lights = len(light_freq_ranges)
 MAX_FOURIER = 255  # TODO : unify gains into only the one adaptive one
-lights = [light.Light(1, r, MAX_FOURIER, 0) for r in light_freq_ranges]  # make a light class instance for every frequency range
+
+# make a light class instance for every frequency range
+lights = [light.Light(1, r, MAX_FOURIER, 0) for r in light_freq_ranges]
 tree = sim.ChristmasTreeSim(N_lights)  # start the simulation of the tree
 
 brightnesses = [10] * N_lights
