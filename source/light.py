@@ -20,6 +20,8 @@ class Light:
         self.beat_increment = beat_inc  # the value to increase brightness temporarily on the beat
 
     def set_brightness(self, fourier_bin, beat):
+        """"Sets a new brightness for the light, based on the parameters set up in init and the audio input
+        For decay, it is assumed that set_brightness is called at regular intervals"""
         # frequency based brightness variation
         b = fourier_bin * self.fourier_scale
 
@@ -27,11 +29,14 @@ class Light:
         if beat:
             b += self.beat_increment
 
+        # constrain to light minimum and maximum
         b = min(self.MAX_BRIGHTNESS, max(self.MIN_BRIGHTNESS, b))
 
+        # if the light decrease is greater than the max decay rate, reduce the brightness slowly
         if self.brightness - b > self.DECAY_RATE:
             b = self.brightness - self.DECAY_RATE
 
+        # if the light brightness is lower than thresh, turn off fully to avoid a strange "slightly glowing" look
         if b <= self.LOW_THRESH:
             b = 0
 
@@ -40,5 +45,3 @@ class Light:
     def out_pwm(self):
         """"Ouput a pwm to the GPIO pin to control the light"""
         pass
-
-    # TODO : add in multiple modes - eg one shwoing loudness as height in the tree

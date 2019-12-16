@@ -1,12 +1,17 @@
 import sounddevice as sd
 import numpy as np
+import cProfile
 
 import dsp
 import light
 import christmas_tree_sim as sim
 
+# speed profiling
+pr = cProfile.Profile()
+pr.disable()
+
 DEV_ID = -1
-BLOCK_DUR = 100  # by default, take 50ms chunks and feed them into the Fourier transform
+BLOCK_DUR = 50  # by default, take 50ms chunks and feed them into the Fourier transform
 
 light_freq_ranges = [(50, 200), (200, 300), (300, 400), (400, 650), (650, 1000)]
 N_lights = len(light_freq_ranges)
@@ -17,15 +22,20 @@ tree = sim.ChristmasTreeSim(N_lights)  # start the simulation of the tree
 brightnesses = [10] * N_lights
 update_display = False
 
-audio_gain = 10
+audio_gain = 100
 P_COEFF = 1
 TARGET_LEVEL = 3
 AUTOGAIN_T = 10  # time frame in seconds over which averages are taken for auto gain adjustment
 sound_amplitudes = np.zeros(np.floor((AUTOGAIN_T * 1000) / BLOCK_DUR).astype(int))  # circular buffer of arrays
 
+stop_callback = False
+
 def callback(indata, frames, time, status):
     """captures the audio at regular intervals and processes it as required"""
     global update_display
+
+    if stop_callback:
+        raise sd.CallbackStop()  # ends the callback when the main loop finishes
 
     if any(indata):
         amplified_audio = np.array(indata[:, 0]) * audio_gain
