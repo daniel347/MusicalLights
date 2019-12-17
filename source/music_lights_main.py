@@ -19,7 +19,7 @@ MODE = light.Mode.freq_range  # options are in the Enum class within light.py
 
 # frequency range options
 light_freq_ranges = [(50, 200), (200, 300), (300, 400), (400, 650), (650, 1000)]
-assert(len(light_freq_ranges) == N_lights)
+assert (len(light_freq_ranges) == N_lights)
 MAX_FOURIER = 255
 LOW_THRESH = 25
 DECAY_RATE = 25
@@ -29,7 +29,7 @@ BEAT_INCREASE = 0
 # loudness mode options
 loudness_levels = [0.5, 1, 3, 5, 7]
 LOUDNESS_GRADIENT = 255
-assert(len(loudness_levels) == N_lights)
+assert (len(loudness_levels) == N_lights)
 
 # This list defines the hardware configuration of lights and how they should react to the sound.
 # see light class for options and parameters.
@@ -65,6 +65,106 @@ sound_amplitudes = np.zeros(np.floor((AUTOGAIN_T * 1000) / BLOCK_DUR).astype(int
 
 stop_callback = False
 
+class GUI:
+
+    def __init__(self, window):
+
+        self.mode_label = Label(window, text="Mode")
+        self.mode_label.grid(column=1, row=0)
+
+        self.mode_dropdown = Combobox(window)
+        self.mode_dropdown['values'] = ("Frequency Range", "Loudness")
+        self.mode_dropdown.current(1)
+        self.mode_dropdown.grid(column=1, row=1)
+
+        self.freq_range_title = Label(window, text="Light Frequency Ranges", font=("Helvetica", 16))
+        self.freq_range_title.grid(column=1, row=2)
+
+        self.light_freq_guis = []
+        self.light_freq_vars = []
+        for i, range in enumerate(light_freq_ranges):
+            low_var = IntVar().set(range[0])
+            low_range = Spinbox(window, from_=0, to=2000, width=10, textvariable=low_var)
+            low_range.set(range[0])
+            low_range.grid(column=0, row=(3 + i), sticky=E)
+
+            light_name = Label(window, text=("Light " + str(i)))
+            light_name.grid(column=1, row=(3 + i))
+
+            high_var = IntVar().set(range[1])
+            high_range = Spinbox(window, from_=0, to=2000, width=10, textvariable=high_var)
+            high_range.set(range[1])
+            high_range.grid(column=2, row=(3 + i), sticky=W)
+
+            self.light_freq_guis.append((light_name, low_range, high_range))
+            self.light_freq_vars.append((low_var, high_var))
+
+        self.loudness_title = Label(window, text="Loudness Cut-offs", font=("Helvetica", 16))
+        self.loudness_title.grid(column=1, row=4 + N_lights)
+
+        self.light_loudness_guis = []
+        self.light_loudness_vars = []
+        for i, loudness in enumerate(loudness_levels):
+            light_name = Label(window, text=("Light " + str(i)))
+            light_name.grid(column=0, row=(6 + N_lights + i))
+
+            loudness_var = DoubleVar().set(loudness)
+            l = Scale(window, orient=HORIZONTAL, length=100, from_=0.0, to=20.0, variable=loudness_var)
+            l.set(loudness)
+            l.grid(column=1, row=(6 + N_lights + i))
+
+            self.light_loudness_vars.append(loudness_var)
+            self.light_loudness_guis.append((light_name, l))
+
+        self.light_param_title = Label(window, text="Other Light Parameters", font=("Helvetica", 16))
+        self.loudness_title.grid(column=1, row=7 + 2*N_lights)
+
+        # Low threshold
+        self.low_thresh_label = Label(window, text="Light Low Threshold ")
+        self.low_thresh_label.grid(column=0, row=(9 + 2*N_lights))
+
+        self.low_thresh_var = IntVar().set(LOW_THRESH)
+        self.low_thresh = Spinbox(window, from_=0, to=255, width=10, textvariable=self.low_thresh_var)
+        self.low_thresh.set(LOW_THRESH)
+        self.low_thresh.grid(column=1, row=(9 + 2*N_lights))
+
+        # Decay rate
+        self.decay_rate_label = Label(window, text="Light Decay Rate")
+        self.decay_rate_label.grid(column=0, row=(10 + 2 * N_lights))
+
+        self.decay_rate_var = IntVar().set(LOW_THRESH)
+        self.decay_rate = Spinbox(window, from_=0, to=255, width=10, textvariable=self.decay_rate_var)
+        self.decay_rate.set(DECAY_RATE)
+        self.decay_rate.grid(column=1, row=(10 + 2 * N_lights))
+
+        # Beat increase
+        self.beat_increase_label = Label(window, text="Increase Brightness on Beat")
+        self.beat_increase_label.grid(column=0, row=(11 + 2 * N_lights))
+
+        self.beat_increase_var = IntVar().set(LOW_THRESH)
+        self.beat_increase = Spinbox(window, from_=0, to=255, width=10, textvariable=self.beat_increase_var)
+        self.beat_increase.set(BEAT_INCREASE)
+        self.beat_increase.grid(column=1, row=(11 + 2 * N_lights))
+
+        # Audio Level
+        self.audio_level_label = Label(window, text="Target Audio Level")
+        self.audio_level_label.grid(column=0, row=(12 + 2 * N_lights))
+
+        self.audio_level_var = DoubleVar().set(TARGET_LEVEL)
+        self.audio_level = Scale(window, orient=HORIZONTAL, length=200, from_=0.0, to=100.0, variable=self.audio_level_var)
+        self.audio_level.set(TARGET_LEVEL)
+        self.audio_level.grid(column=1, row=(12 + 2*N_lights))
+
+        # update button
+        self.update_button = Button(window, text="Update Parameters", width=50, command=self.update_parameters)
+        self.update_button.grid(column=1, row=13 + 2 * N_lights)
+
+    def update_parameters(self):
+        print("Button pressed")
+        for _, low_var, high_var in self.light_freq_guis:
+            print("Low : {}, High : {}".format(low_var.get(), high_var.get()))
+
+
 
 
 def callback(indata, frames, time, status):
@@ -92,6 +192,7 @@ def callback(indata, frames, time, status):
     else:
         print('no input', flush=True)
 
+
 def update_gain(rms_amplitude):
     """function for adaptive audio gain"""
     global audio_gain
@@ -111,47 +212,10 @@ if __name__ == "__main__":
     # ========GUI========
     window = Tk()
     window.title("Musical Lights")
-    window.geometry('650x400')
+    window.geometry('600x500')
 
-    mode_label = Label(window, text="Mode")
-    mode_label.grid(column=0, row=0)
-
-    mode_dropdown = Combobox(window)
-    mode_dropdown['values'] = ("Frequency Range", "Loudness")
-    mode_dropdown.current(1)
-    mode_dropdown.grid(column=1, row=0)
-
-    freq_range_title = Label(window, text="Light Frequency Ranges")
-    freq_range_title.grid(column=0, row=2)
-
-    light_freq_guis = []
-    for i, range in enumerate(light_freq_ranges):
-        low_range = Spinbox(window, from_=0, to=2000, width=50, textvariable=IntVar().set(range[0]))
-        low_range.grid(column=0, row=(3 + i))
-
-        light_name = Label(window, text=("Light " + str(i)))
-        light_name.grid(column=1, row=(3 + i))
-
-        high_range = Spinbox(window, from_=0, to=2000, width=50, textvariable=IntVar().set(range[1]))
-        high_range.grid(column=2, row=(3 + i))
-
-        light_freq_guis.append((light_name, low_range, high_range))
-
-    loudness_title = Label(window, text="Loudness Cut-offs")
-    loudness_title.grid(column=0, row=4 + N_lights)
-
-    light_loudness_guis = []
-    for i, loudness in enumerate(loudness_levels):
-        light_name = Label(window, text=("Light " + str(i)))
-        light_name.grid(column=0, row=(6 + N_lights + i))
-
-        l = Scale(window, label="Test", orient=HORIZONTAL, length=100, from_=0.0, to=20.0)
-        l.grid(column=1, row=(6 +  N_lights + i))
-
-        light_loudness_guis.append((light_name, l))
-
+    gui = GUI(window)
     window.mainloop()
-
 
 
     # /////////////////////////////////
@@ -179,4 +243,5 @@ if __name__ == "__main__":
 
                 # some method of killing the system - maybe tkinter gui for actual useage
     # =========================
+
 
