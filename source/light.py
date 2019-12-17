@@ -3,14 +3,17 @@ import enum
 
 class Light:
 
-    def __init__(self, pin, mode, low_thresh, decay_rate):
+    def __init__(self, pin, mode, low_thresh, decay_rate, increase_rate):
         # light parameters
-        self.brightness = 0
+        self.brightness = 0  # the calculated brightness from the sound
         self.MAX_BRIGHTNESS = 255
         self.MIN_BRIGHTNESS = 0
         self.LOW_THRESH = low_thresh  # discount low levels of noise in the signal by keeping the lights off if under this value
-        self.DECAY_RATE = decay_rate  # slowly fades out lights to prolong the effect
+        self.DECAY_RATE = decay_rate  # Control the max rate of change of light output (units per second)
+        self.INCREASE_RATE = increase_rate
         self.gpio_pin = pin
+
+        self.light_output = self.brightness  # the actual brightness of the light including smoothing
 
         # mode control enum - NB: main must run the appropriate setup function after init
         self.mode = mode
@@ -61,6 +64,23 @@ class Light:
             b = 0
 
         self.brightness = int(round(b))
+
+    def decay_grow(self, dt):
+        """"Smooths out the changes in brightness using the defined decay and grow
+        properties to smoothly vary the brightness - will need to be moved to raspberry pi"""
+
+        max_dec = int(round(dt * self.DECAY_RATE))
+        max_inc = int(round(dt * self.INCREASE_RATE))
+
+        if (self.light_output - self.brightness) > 0:
+            self.light_output -= (
+                max_dec if (self.light_output - self.brightness) > max_dec else (self.light_output - self.brightness))
+        elif (self.light_output - self.brightness) < 0:
+            self.light_output += (
+                max_inc if (self.brightness - self.light_output) > max_inc else (self.brightness - self.light_output))
+
+        return self.light_output
+
 
     def out_pwm(self):
         """"Ouput a pwm to the GPIO pin to control the light"""

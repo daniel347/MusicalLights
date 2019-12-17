@@ -1,3 +1,5 @@
+import time
+
 import sounddevice as sd
 import numpy as np
 import cProfile
@@ -21,9 +23,10 @@ MODE = light.Mode.freq_range  # options are in the Enum class within light.py
 light_freq_ranges = [(50, 200), (200, 300), (300, 400), (400, 650), (650, 1000)]
 assert (len(light_freq_ranges) == N_lights)
 MAX_FOURIER = 255
-LOW_THRESH = 25
-DECAY_RATE = 25
-update_lights = False
+LOW_THRESH = 5
+DECAY_RATE = 350
+INCREASE_RATE = 2000
+update_lights = True
 BEAT_INCREASE = 0
 
 # loudness mode options
@@ -33,7 +36,7 @@ assert (len(loudness_levels) == N_lights)
 
 # This list defines the hardware configuration of lights and how they should react to the sound.
 # see light class for options and parameters.
-lights = [light.Light(1, MODE, LOW_THRESH, DECAY_RATE) for i in range(N_lights)]
+lights = [light.Light(1, MODE, LOW_THRESH, DECAY_RATE, INCREASE_RATE) for i in range(N_lights)]
 
 if MODE == light.Mode.freq_range:
     for l, r in zip(lights, light_freq_ranges):
@@ -54,10 +57,10 @@ if SIMULATE:
 
 # ========AUDIO PARAMETERS========
 DEV_ID = -1
-BLOCK_DUR = 100  # by default, take 50ms chunks and feed them into the Fourier transform
+BLOCK_DUR = 50  # by default, take 50ms chunks and feed them into the Fourier transform
 
-audio_gain = 100
-P_COEFF = 1
+audio_gain = 300
+P_COEFF = 0.1
 TARGET_LEVEL = 20
 AUTOGAIN_T = 10  # time frame in seconds over which averages are taken for auto gain adjustment
 sound_amplitudes = np.zeros(np.floor((AUTOGAIN_T * 1000) / BLOCK_DUR).astype(int))  # circular buffer of arrays
@@ -69,6 +72,7 @@ class GUI:
 
     def __init__(self, window):
 
+        # Lighting mode
         self.mode_label = Label(window, text="Mode")
         self.mode_label.grid(column=1, row=0)
 
@@ -77,6 +81,7 @@ class GUI:
         self.mode_dropdown.current(1)
         self.mode_dropdown.grid(column=1, row=1)
 
+        # Frequency ranges
         self.freq_range_title = Label(window, text="Light Frequency Ranges", font=("Helvetica", 16))
         self.freq_range_title.grid(column=1, row=2)
 
@@ -99,6 +104,7 @@ class GUI:
             self.light_freq_guis.append((light_name, low_range, high_range))
             self.light_freq_vars.append((low_var, high_var))
 
+        # Loudness values
         self.loudness_title = Label(window, text="Loudness Cut-offs", font=("Helvetica", 16))
         self.loudness_title.grid(column=1, row=4 + N_lights)
 
@@ -231,15 +237,20 @@ if __name__ == "__main__":
         tree.draw_tree(brightnesses)
 
     # ========MAIN LOOP========
+    last_time = time.time()
+    new_time = time.time()
+
     with sd.InputStream(device=DEV_ID, channels=1, callback=callback, blocksize=blocksize, samplerate=samplerate):
         while True:
+            last_time = new_time
+            new_time = time.time()
             if update_lights:
                 # update the light brightnesses now
 
                 if SIMULATE:  # if running the simulation, update this
-                    brightnesses = [l.brightness for l in lights]
+                    brightnesses = [l.decay_grow(new_time - last_time) for l in lights]
                     tree.draw_tree(brightnesses)
-                update_lights = False
+                #update_lights = False
 
                 # some method of killing the system - maybe tkinter gui for actual useage
     # =========================
