@@ -177,8 +177,7 @@ class GUI:
 
     def update_parameters(self):
         print("Button pressed")
-        global MODE
-        global TARGET_LEVEL
+        global MODE, TARGET_LEVEL
 
         # update mode
         for i, mode in enumerate(self.mode_dropdown_options):
