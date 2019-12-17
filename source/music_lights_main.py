@@ -57,7 +57,7 @@ UPDATE_PERIOD = 25  # time between successive frames in ms
 
 # ========AUDIO PARAMETERS========
 DEV_ID = -1
-BLOCK_DUR = 50  # by default, take 50ms chunks and feed them into the Fourier transform
+BLOCK_DUR = 100  # by default, take 50ms chunks and feed them into the Fourier transform
 
 audio_gain = 300
 P_COEFF = 0.1
@@ -185,17 +185,18 @@ class GUI:
                 MODE = light.Mode(i + 1)  # NB : enum list and dropdown list must be in the same order
 
         # setup lights with new variables
-        for light, (_, low_var, high_var), (_, loudness) in zip(lights, self.light_freq_guis, self.light_loudness_guis):
+        for l, (_, low_var, high_var), (_, loudness) in zip(lights, self.light_freq_guis, self.light_loudness_guis):
             # frequency mode setup
-            light.setup_freq_range_mode((low_var, high_var), MAX_FOURIER, self.beat_increase.get())
+            l.setup_freq_range_mode((int(low_var.get()), int(high_var.get())), MAX_FOURIER, self.beat_increase.get())
 
             # loudness mode setup
-            light.setup_loudness_mode(loudness, LOUDNESS_GRADIENT)
+            l.setup_loudness_mode(loudness.get(), LOUDNESS_GRADIENT)
 
-            # decay, increase rates and low thresh
-            light.DECAY_RATE = self.decay_rate.get()
-            light.LOW_THRESH = self.low_thresh.get()
-            light.INCREASE_RATE = self.increase_rate.get()
+            # mode, decay, increase rates and low thresh
+            l.mode = MODE
+            l.DECAY_RATE = int(self.decay_rate.get())
+            l.LOW_THRESH = int(self.low_thresh.get())
+            l.INCREASE_RATE = int(self.increase_rate.get())
 
         # audio parameters
         TARGET_LEVEL = self.audio_level.get()
