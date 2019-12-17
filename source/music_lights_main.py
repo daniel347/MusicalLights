@@ -38,13 +38,11 @@ assert (len(loudness_levels) == N_lights)
 # see light class for options and parameters.
 lights = [light.Light(1, MODE, LOW_THRESH, DECAY_RATE, INCREASE_RATE) for i in range(N_lights)]
 
-if MODE == light.Mode.freq_range:
-    for l, r in zip(lights, light_freq_ranges):
-        l.setup_freq_range_mode(r, MAX_FOURIER, BEAT_INCREASE)
+for l, r in zip(lights, light_freq_ranges):
+    l.setup_freq_range_mode(r, MAX_FOURIER, BEAT_INCREASE)
 
-elif MODE == light.Mode.loudness:
-    for l, v in zip(lights, loudness_levels):
-        l.setup_loudness_mode(v, LOUDNESS_GRADIENT)
+for l, v in zip(lights, loudness_levels):
+    l.setup_loudness_mode(v, LOUDNESS_GRADIENT)
 # ======================
 
 # ========SIMULATION========
@@ -52,6 +50,8 @@ SIMULATE = True
 brightnesses = [10] * N_lights
 if SIMULATE:
     tree = sim.ChristmasTreeSim(N_lights)  # start the simulation of the tree
+
+UPDATE_PERIOD = 25  # time between successive frames in ms
 # ==========================
 
 
@@ -77,8 +77,9 @@ class GUI:
         self.mode_label.grid(column=1, row=0)
 
         self.mode_dropdown = Combobox(window)
-        self.mode_dropdown['values'] = ("Frequency Range", "Loudness")
-        self.mode_dropdown.current(1)
+        self.mode_dropdown_options = ("Frequency Range", "Loudness")
+        self.mode_dropdown['values'] = self.mode_dropdown_options
+        self.mode_dropdown.current(0)
         self.mode_dropdown.grid(column=1, row=1)
 
         # Frequency ranges
@@ -139,9 +140,18 @@ class GUI:
         self.decay_rate_label.grid(column=0, row=(10 + 2 * N_lights))
 
         self.decay_rate_var = IntVar().set(LOW_THRESH)
-        self.decay_rate = Spinbox(window, from_=0, to=255, width=10, textvariable=self.decay_rate_var)
+        self.decay_rate = Spinbox(window, from_=0, to=500, width=10, textvariable=self.decay_rate_var)
         self.decay_rate.set(DECAY_RATE)
         self.decay_rate.grid(column=1, row=(10 + 2 * N_lights))
+
+        # Increase rate
+        self.increase_rate_label = Label(window, text="Light increase Rate")
+        self.increase_rate_label.grid(column=0, row=(10 + 2 * N_lights))
+
+        self.increase_rate_var = IntVar().set(LOW_THRESH)
+        self.increase_rate = Spinbox(window, from_=0, to=255, width=10, textvariable=self.increase_rate_var)
+        self.increase_rate.set(DECAY_RATE)
+        self.increase_rate.grid(column=1, row=(10 + 2 * N_lights))
 
         # Beat increase
         self.beat_increase_label = Label(window, text="Increase Brightness on Beat")
@@ -167,10 +177,29 @@ class GUI:
 
     def update_parameters(self):
         print("Button pressed")
-        for _, low_var, high_var in self.light_freq_guis:
-            print("Low : {}, High : {}".format(low_var.get(), high_var.get()))
+        global MODE
+        global TARGET_LEVEL
 
+        # update mode
+        for i, mode in enumerate(self.mode_dropdown_options):
+            if (self.mode_dropdown.get() == mode):
+                MODE = light.Mode(i + 1)  # NB : enum list and dropdown list must be in the same order
 
+        # setup lights with new variables
+        for light, (_, low_var, high_var), (_, loudness) in zip(lights, self.light_freq_guis, self.light_loudness_guis):
+            # frequency mode setup
+            light.setup_freq_range_mode((low_var, high_var), MAX_FOURIER, self.beat_increase.get())
+
+            # loudness mode setup
+            light.setup_loudness_mode(loudness, LOUDNESS_GRADIENT)
+
+            # decay, increase rates and low thresh
+            light.DECAY_RATE = self.decay_rate.get()
+            light.LOW_THRESH = self.low_thresh.get()
+            light.INCREASE_RATE = self.increase_rate.get()
+
+        # audio parameters
+        TARGET_LEVEL = self.audio_level.get()
 
 
 def callback(indata, frames, time, status):
@@ -212,6 +241,13 @@ def update_gain(rms_amplitude):
 
     audio_gain += (TARGET_LEVEL - dsp.rms(sound_amplitudes)) * P_COEFF
 
+def main_loop(window, dt):
+    brightnesses = [l.decay_grow(dt) for l in lights]
+
+    if SIMULATE:  # if running the simulation, update this
+        tree.draw_tree(brightnesses)
+    window.after(dt, main_loop, window, dt)
+
 
 if __name__ == "__main__":
 
@@ -221,38 +257,23 @@ if __name__ == "__main__":
     window.geometry('600x500')
 
     gui = GUI(window)
-    window.mainloop()
+    # ===================
 
-
-    # /////////////////////////////////
-    # Set up audio recording parameters
+    # ========AUDIO PARAMETERS========
     if (DEV_ID < 0):
         DEV_ID = sd.default.device["input"]
 
     samplerate = sd.query_devices(DEV_ID)['default_samplerate']
     blocksize = int((samplerate * BLOCK_DUR) / 1000)
-    # /////////////////////////////////
+    # ================================
 
     if SIMULATE:
         tree.draw_tree(brightnesses)
 
     # ========MAIN LOOP========
-    last_time = time.time()
-    new_time = time.time()
-
     with sd.InputStream(device=DEV_ID, channels=1, callback=callback, blocksize=blocksize, samplerate=samplerate):
-        while True:
-            last_time = new_time
-            new_time = time.time()
-            if update_lights:
-                # update the light brightnesses now
-
-                if SIMULATE:  # if running the simulation, update this
-                    brightnesses = [l.decay_grow(new_time - last_time) for l in lights]
-                    tree.draw_tree(brightnesses)
-                #update_lights = False
-
-                # some method of killing the system - maybe tkinter gui for actual useage
+        window.after(UPDATE_PERIOD, main_loop, window, UPDATE_PERIOD)
+        window.mainloop()
     # =========================
 
 
