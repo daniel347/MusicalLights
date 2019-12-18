@@ -5,6 +5,7 @@ import numpy as np
 import cProfile
 from tkinter import *
 from tkinter.ttk import *
+import struct
 
 import dsp
 import light
@@ -70,9 +71,21 @@ stop_callback = False
 # ================================
 
 # ========BLUETOOTH SETUP========
-ADDR =
-PORT =
-client = bt.BluetoothClient()
+USE_SERVER = True
+if USE_SERVER:
+    uuid = "1a7f34ab"  # arbitrary code to identify the right service
+
+    data_start_code = 100  # data codes
+    init_start_code = 101
+    end_code = 255 # indicates end of transmission
+
+    # (byte) start_code : (byte) num_lights : (int) increase_rate : (int) decay_rate : (byte) end_code
+    init_format = "B B I I B"
+
+    # (byte) start_code : (byte) light_1_value --- (byte) light_n_value : (byte) end_code
+    data_format = "B " + "B " * N_lights + "B"
+
+    client = bt.BluetoothClient(uuid)
 # ===============================
 
 class GUI:
@@ -208,6 +221,11 @@ class GUI:
         # audio parameters
         TARGET_LEVEL = self.audio_level.get()
 
+        # update_bluetooth
+        if USE_SERVER:
+            init_data = struct.pack(init_format, data_start_code, N_lights, INCREASE_RATE, DECAY_RATE, end_code)
+            client.send(init_data)
+
 
 def callback(indata, frames, time, status):
     """captures the audio at regular intervals and processes it as required"""
@@ -228,6 +246,15 @@ def callback(indata, frames, time, status):
         for light_obj in lights:
             # calculate the brightness of each light instance from the sound
             light_obj.set_brightness(fourier=fft, freqs=freqs, loudness=sound_amplitudes[1])
+
+        # send brightnesses to the Raspberry Pi
+        if USE_SERVER:
+            data_list = [l.brightness for l in lights]
+            data_list.insert(0, data_start_code)
+            data_list.append(end_code)
+            data = struct.pack(data_format, *data_list)
+
+            client.send(data)
 
         update_lights = True
 
@@ -277,6 +304,21 @@ if __name__ == "__main__":
 
     if SIMULATE:
         tree.draw_tree(brightnesses)
+
+    # ========BLUETOOTH SERVER CONNECTION========
+    if USE_SERVER:
+        while not client.connected:
+            while not client.found_service:
+                print("Trying to find service ...")
+                client.find_services()
+            print("Trying to connect to bluetooth server ...")
+            client.connect()
+
+    # send the intiialisation info
+        init_data = struct.pack(init_format, data_start_code, N_lights, INCREASE_RATE, DECAY_RATE, end_code)
+        print(init_data)
+        client.send(init_data)
+    # ===========================================
 
     # ========MAIN LOOP========
     with sd.InputStream(device=DEV_ID, channels=1, callback=callback, blocksize=blocksize, samplerate=samplerate):
