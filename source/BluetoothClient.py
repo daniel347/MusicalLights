@@ -8,7 +8,7 @@ class BluetoothClientSDP():
 		self.found_service = True
 		self.connected = False
 
-		if (self.find_services() == -1):
+		if self.find_services() == -1:
 			return
 		else
 			self.connect()
@@ -55,7 +55,7 @@ class BluetoothClientSDP():
 		
 		try:
 			self.socket.send(data)
-		except BluetoothError:
+		except bluetooth.BluetoothError:
 			print("ERROR: could not send data")
 			return -1
 			
@@ -65,7 +65,7 @@ class BluetoothClientSDP():
 		
 		try:
 			self.socket.recv(1024)
-		except BluetoothError:
+		except bluetooth.BluetoothError:
 			print("ERROR: could not recieve")
 			return -1
 		

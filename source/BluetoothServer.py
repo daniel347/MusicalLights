@@ -15,7 +15,7 @@ class BluetoothServerSDP():
 		self.socket.listen(1)
 
 		self.uuid = uuid  # arbitrary means of identifying the service
-		bluetooth.advertise_service(self.server, service_name, uuid)
+		bluetooth.advertise_service(self.socket, service_name, uuid)
 
 		self.client_socket, self.address = self.socket.accept()
 			
@@ -23,7 +23,7 @@ class BluetoothServerSDP():
 			
 		try:
 			self.socket.send(data)
-		except BluetoothError:
+		except bluetooth.BluetoothError:
 			print "ERROR: send failed"
 			return -1
 
@@ -33,7 +33,7 @@ class BluetoothServerSDP():
 
 		try:
 			data = self.socket.recv(recv_size)
-		except BluetoothError:
+		except bluetooth.BluetoothError:
 			print "ERROR: recieve failed"
 			return -1
 
