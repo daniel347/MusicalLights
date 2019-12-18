@@ -9,6 +9,7 @@ from tkinter.ttk import *
 import dsp
 import light
 import christmas_tree_sim as sim
+import BluetoothClient as bt
 
 # ========PROFILING========
 pr = cProfile.Profile()
@@ -64,9 +65,15 @@ P_COEFF = 0.1
 TARGET_LEVEL = 20
 AUTOGAIN_T = 10  # time frame in seconds over which averages are taken for auto gain adjustment
 sound_amplitudes = np.zeros(np.floor((AUTOGAIN_T * 1000) / BLOCK_DUR).astype(int))  # circular buffer of arrays
-# ================================
 
 stop_callback = False
+# ================================
+
+# ========BLUETOOTH SETUP========
+ADDR =
+PORT =
+client = bt.BluetoothClient()
+# ===============================
 
 class GUI:
 
@@ -241,7 +248,8 @@ def update_gain(rms_amplitude):
     audio_gain += (TARGET_LEVEL - dsp.rms(sound_amplitudes)) * P_COEFF
 
 def main_loop(window, dt):
-    brightnesses = [l.decay_grow(dt) for l in lights]
+    """Function called at regular intervals of dt ms"""
+    brightnesses = [l.decay_grow(dt) for l in lights]  # calculate the decay or grow of the lights
 
     if SIMULATE:  # if running the simulation, update this
         tree.draw_tree(brightnesses)
