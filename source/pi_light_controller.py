@@ -1,11 +1,9 @@
-import BluetoothServer as bt
+import math
 import struct
 import time
-import math
-import enum
+import colour_mode.ColourMode
 
-import numpy as np
-
+import BluetoothServer as bt
 
 # ========LIGHT PARAMETERS========
 DECAY_RATE = 350
@@ -24,6 +22,9 @@ LED_ranges = [int(math.floor(N_LEDS / N_lights)) * n for n in range(1, N_lights 
 FADE = 5  # fade 5 leds from each side of the boundary between two light groups for a smooth transition
 LED_Colours = []
 
+# ====================================
+
+# ========COLOUR MODE OPTIONS========
 # spectrum mode params
 OMEGA = 1  # controls the rate of changing colour with time
 TWO_PI_N_LEDS = 2 * math.pi / N_LEDS  # constant value
@@ -32,9 +33,24 @@ TWO_PI_3 = 2 * math.pi / 3
 FOUR_PI_3 = 2 * TWO_PI_3
 
 # colours are functions of time and led strip position
-red = lambda t, x : math.sin(OMEGA * t + TWO_PI_N_LEDS * x)
-green = lambda t, x : math.sin(OMEGA * t + TWO_PI_N_LEDS * x + TWO_PI_3)
-blue = lambda t, x : math.sin(OMEGA * t + TWO_PI_N_LEDS * x + FOUR_PI_3)
+# sinusiodal functions between 0 and 1 of varying phase produce the shifting colour spectrum effect
+red = lambda t, x: (1.0 + math.sin(OMEGA * t + TWO_PI_N_LEDS * x)) / 2.0
+green = lambda t, x: (1.0 + math.sin(OMEGA * t + TWO_PI_N_LEDS * x + TWO_PI_3)) / 2.0
+blue = lambda t, x: (1.0 + math.sin(OMEGA * t + TWO_PI_N_LEDS * x + FOUR_PI_3)) / 2.0
+
+# colour array for other colour modes - set over bluetooth
+colours = [(255, 0, 0),
+           (0, 255, 0),
+           (0, 0, 255)]
+
+# alternating two
+alternating_T = 1  # time to change from one colour to the next
+
+# beat change mode
+colour_index = 0  # the index of the colour being used right now
+beat = False
+
+colour_mode
 
 # =====================================
 
@@ -44,6 +60,7 @@ SERVICE_NAME = "MuscialLights Controller"
 
 data_start_code = 100  # data codes
 init_start_code = 101
+colour_set_start_code = 102
 end_code = 255  # indicates end of transmission
 
 # NB : the start code is read seperately so is removed from these formats
@@ -51,14 +68,24 @@ end_code = 255  # indicates end of transmission
 init_format = "B I I B B"
 init_size = 11  # 3 bytes and 2 4 byte ints
 
-# (byte) start_code : (byte) light_1_value --- (byte) light_n_value : (byte) end_code
-data_format = "B " * N_lights + "B"
+# (byte) start_code : (byte) light_1_value --- (byte) light_n_value : (byte) beat : (byte) end_code
+data_format = "B " * N_lights + "B B"
 data_size = 1 + N_lights
 
+# (byte) num_colours
+colour_start_format = "B"
+colour_start_size = 1
+
+# (byte) red_val : (byte) green_val : (byte) blue_val
+colour_format = "B B B"
+colour_size = 3
+
+# (byte) end_code  - > no need for format as it will always be a single byte
+
 server = bt.BluetoothServerSDP(uuid, SERVICE_NAME)
+
+
 # ====================================
-
-
 
 
 def decay_grow(dt, light_output, brightness):
@@ -77,61 +104,66 @@ def decay_grow(dt, light_output, brightness):
 
     return light_output
 
-def set_lights(colour, t):
+
+def set_lights(t, beat):
     """"Sets the colour of the lights based on the mode and the time from the start"""
     x = 0
-    if colour == ColourMode.spectrum:
+    if colour_mode == ColourMode.spectrum:
         for i, range in enumerate(LED_ranges):
             while x < range:
                 LED_val = (int(round(red(t, x) * brightnesses[i])),
                            int(round(green(t, x) * brightnesses[i])),
-                           int(round(blue(t, x) * brightnesses[i]))) # rgb tuple for LED x
+                           int(round(blue(t, x) * brightnesses[i])))  # rgb tuple for LED x
 
                 x += 1
                 # set to neopixel array
 
-    if colour == ColourMode.blue:
+    if colour_mode == ColourMode.single_colour:
+        # uses first colour in colours list
+        c = colours[0]
         for i, range in enumerate(LED_ranges):
             while x < range:
-                LED_val = (0, 0, brightnesses[i])  # rgb tuple for LED x
+                LED_val = (int(round((c[0] * brightnesses[i]) / 255)),
+                           int(round((c[1] * brightnesses[i]) / 255)),
+                           int(round((c[2] * brightnesses[i]) / 255)))
 
                 x += 1
                 # set to neopixel array
 
-    if colour == ColourMode.green:
+    if colour_mode == ColourMode.alternating_two:
+        c = colours[math.floor(t / alternating_T) % 2]
         for i, range in enumerate(LED_ranges):
             while x < range:
-                LED_val = (0, brightnesses[i], 0)  # rgb tuple for LED x
+                LED_val = (int(round((c[0] * brightnesses[i]) / 255)),
+                           int(round((c[1] * brightnesses[i]) / 255)),
+                           int(round((c[2] * brightnesses[i]) / 255)))
 
                 x += 1
                 # set to neopixel array
 
-    if colour == ColourMode.red:
+    if colour_mode == ColourMode.change_on_beat:
+        if beat:
+            colour_index = (colour_index + 1) % len(colours)
+
+        c = colours[colour_index]
         for i, range in enumerate(LED_ranges):
             while x < range:
-                LED_val = (brightnesses[i], 0, 0)  # rgb tuple for LED x
+                LED_val = (int(round((c[0] * brightnesses[i]) / 255)),
+                           int(round((c[1] * brightnesses[i]) / 255)),
+                           int(round((c[2] * brightnesses[i]) / 255)))
 
                 x += 1
                 # set to neopixel array
 
-    if colour == ColourMode.white:
-        for i, range in enumerate(LED_ranges):
-            while x < range:
-                LED_val = (brightnesses[i], brightnesses[i], brightnesses[i])  # rgb tuple for LED x
-
-                x += 1
-                # set to neopixel array
-
-    # show neopixel values
-
+   # show neopixel values
 
 if __name__ == "__main__":
 
-    # ========BLUETOOTH SETUP========
 
     start = time.time()
     last = time.time()
     now = time.time()
+
     # ========MAIN LOOP========
     while True:
         last = now
@@ -146,8 +178,8 @@ if __name__ == "__main__":
                 # dont know how to handle this
                 print("Check digit not correct!")
 
+            beat = bool(tuple_data[-2])
             brightnesses = [tuple_data[i] for i in range(N_lights)]
-
 
         if code == init_start_code:
             data = server.recieve_data(init_size)
@@ -156,12 +188,13 @@ if __name__ == "__main__":
                 # dont know how to handle this
                 print("Check digit not correct!")
 
-class ColourMode(enum.Enum):
-    spectrum = 1
-    red = 2
-    green = 3
-    blue = 4
-    white = 5
+        if code == colour_set_start_code:
+            num_colours = struct.unpack(colour_start_format, server.recieve_data(colour_start_size))
 
+            for i in range(num_colours):
+                colour_data = server.recieve_data(colour_size)
+                colours[i] = struct.unpack(colour_format, colour_data)
 
-
+            if ord(server.recieve_data(1)) != end_code:
+                # dont know how to handle this
+                print("Check digit not correct")

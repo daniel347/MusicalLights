@@ -9,6 +9,7 @@ import struct
 
 import dsp
 import light
+from colour_mode import ColourMode
 import christmas_tree_sim as sim
 import BluetoothClient as bt
 
@@ -30,6 +31,7 @@ DECAY_RATE = 350
 INCREASE_RATE = 2000
 update_lights = True
 BEAT_INCREASE = 0
+BEAT_THRESH = 0.2  # beat detection threshold, see detect_beat() in dsp.py
 
 # loudness mode options
 loudness_levels = [0.5, 1, 3, 5, 7]
@@ -45,6 +47,9 @@ for l, r in zip(lights, light_freq_ranges):
 
 for l, v in zip(lights, loudness_levels):
     l.setup_loudness_mode(v, LOUDNESS_GRADIENT)
+
+# colour modes
+colour_mode = ColourMode.spectrum
 # ======================
 
 # ========SIMULATION========
@@ -77,13 +82,21 @@ if USE_SERVER:
 
     data_start_code = 100  # data codes
     init_start_code = 101
+    colour_set_start_code = 102
     end_code = 255 # indicates end of transmission
 
-    # (byte) start_code : (byte) num_lights : (int) increase_rate : (int) decay_rate : (byte) end_code
-    init_format = "B B I I B"
+    # (byte) start_code : (byte) num_lights : (int) increase_rate : (int) decay_rate : (byte) colour_mode : (byte) end_code
+    init_format = "B B I I B B"
 
-    # (byte) start_code : (byte) light_1_value --- (byte) light_n_value : (byte) end_code
-    data_format = "B " + "B " * N_lights + "B"
+    # (byte) start_code : (byte) light_1_value --- (byte) light_n_value : (byte) beat  (byte) end_code
+    data_format = "B " + "B " * N_lights + "B B"
+
+    # (byte) start_code : (byte) num_colours
+    colour_start_format = "B B"
+    # (byte) red_val : (byte) green_val : (byte) blue_val
+    colour_format = "B B B"
+    # (byte) end_code
+    colour_end_format = "B"
 
     client = bt.BluetoothClient(uuid)
 # ===============================
@@ -243,6 +256,8 @@ def callback(indata, frames, time, status):
         # fft contains the fourier coefficients
         # freqs is an array of the corresponding frequencies
 
+        beat = dsp.detect_beat(amplified_audio, BEAT_THRESH)  # determine if a beat exists in the music here
+
         for light_obj in lights:
             # calculate the brightness of each light instance from the sound
             light_obj.set_brightness(fourier=fft, freqs=freqs, loudness=sound_amplitudes[1])
@@ -251,6 +266,7 @@ def callback(indata, frames, time, status):
         if USE_SERVER:
             data_list = [l.brightness for l in lights]
             data_list.insert(0, data_start_code)
+            data_list.append(1 if beat else 0)  # ternary statement may not be necessary
             data_list.append(end_code)
             data = struct.pack(data_format, *data_list)
 
@@ -270,8 +286,6 @@ def update_gain(rms_amplitude):
     # first add the new amplitude to the circular buffer
     sound_amplitudes[0] = rms_amplitude
     sound_amplitudes = np.roll(sound_amplitudes, 1)
-
-    print(rms_amplitude)
 
     audio_gain += (TARGET_LEVEL - dsp.rms(sound_amplitudes)) * P_COEFF
 
@@ -315,7 +329,7 @@ if __name__ == "__main__":
             client.connect()
 
     # send the intiialisation info
-        init_data = struct.pack(init_format, data_start_code, N_lights, INCREASE_RATE, DECAY_RATE, end_code)
+        init_data = struct.pack(init_format, data_start_code, N_lights, INCREASE_RATE, DECAY_RATE, int(colour_mode), end_code)
         print(init_data)
         client.send(init_data)
     # ===========================================
