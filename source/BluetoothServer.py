@@ -1,6 +1,6 @@
 import bluetooth
 
-class BluetoothServerSDP():
+class BluetoothServerSDP:
 
 	def __init___(self, uuid, service_name):
 		self.socket = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
@@ -12,7 +12,7 @@ class BluetoothServerSDP():
 			print("ERROR: server bind failed")
 			return
 
-		self.socket.listen(1)
+		self.socket.listen(1)  # hopefully blocking
 
 		self.uuid = uuid  # arbitrary means of identifying the service
 		bluetooth.advertise_service(self.socket, service_name, uuid)
