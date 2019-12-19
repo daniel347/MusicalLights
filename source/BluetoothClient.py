@@ -1,60 +1,63 @@
 import bluetooth
 
 class BluetoothClientSDP():
-	
-	def __init__(self, uuid):
 
-		self.uuid = uuid
-		self.connected = False
+    def __init__(self, uuid):
 
-		matches = bluetooth.find_service(uuid=self.uuid)
-		for match in matches :
-			print(match)
+        self.uuid = uuid
+        self.connected = False
 
-		if len(matches) == 0:
-			print("No services found")
-			return
+        matches = bluetooth.find_service(uuid=self.uuid)
+        for match in matches :
+            print(match)
 
-		# take the first match found - should be the only one!
-		self.port = matches[0]["port"]
-		self.name = matches[0]["name"]
-		self.host = matches[0]["host"]
+        if len(matches) == 0:
+            print("No services found")
+            return
 
-		try:
-			self.socket = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
-			self.socket.connect((self.host, self.port))
-		except bluetooth.BluetoothError:
-			print("ERROR: could not connect to server")
-			return
+        # take the first match found - should be the only one!
+        self.port = matches[0]["port"]
+        self.name = matches[0]["name"]
+        self.host = matches[0]["host"]
 
-		self.connected = True
+        try:
+            self.socket = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
+            self.socket.connect((self.host, self.port))
+        except bluetooth.BluetoothError:
+            print("ERROR: could not connect to server")
+            return
 
-	def connect(self):
-		"""attempts to connect the client to the address and port provided in init"""
-		try:
-			self.socket = bluetooth.BluetoothSocket( bluetooth.RFCOMM )
-			self.socket.connect((self.addr, self.port))
-			self.connected = True
-		except BluetoothError:
-			print "bluetooth error!"
-			self.connected = False
+        self.connected = True
 
-	def send_data(self, data):
-		
-		try:
-			self.socket.send(data)
-		except BluetoothError:
-			print "bluetooth error while sending"
-			return -1
-			
-		return 1
-		
-	def recieve_data(self):
-		
-		try:
-			self.socket.recv(1024)
-		except BluetoothError:
-			print "bluetooth error while recieving"
-			return -1
-		
-		return 1
+    def connect(self):
+        """attempts to connect the client to the address and port provided in init"""
+        try:
+            self.socket = bluetooth.BluetoothSocket( bluetooth.RFCOMM )
+            self.socket.connect((self.host, self.port))
+            self.connected = True
+        except bluetooth.BluetoothError:
+            print("ERROR: could not connect to server")
+            self.connected = False
+            return -1
+
+        return 1
+
+    def send_data(self, data):
+
+        try:
+            self.socket.send(data)
+        except BluetoothError:
+            print "ERROR: could not send"
+            return -1
+
+        return 1
+
+    def recieve_data(self):
+
+        try:
+            self.socket.recv(1024)
+        except bluetooth.BluetoothError:
+            print "ERROR: could not send"
+            return -1
+
+        return 1
