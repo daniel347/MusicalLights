@@ -5,6 +5,7 @@ import numpy as np
 import cProfile
 from tkinter import *
 from tkinter.ttk import *
+import struct
 
 import dsp
 import light
@@ -58,7 +59,7 @@ UPDATE_PERIOD = 25  # time between successive frames in ms
 
 # ========AUDIO PARAMETERS========
 DEV_ID = -1
-BLOCK_DUR = 50  # by default, take 50ms chunks and feed them into the Fourier transform
+BLOCK_DUR = 100  # by default, take 50ms chunks and feed them into the Fourier transform
 
 audio_gain = 300
 P_COEFF = 0.1
@@ -70,9 +71,21 @@ stop_callback = False
 # ================================
 
 # ========BLUETOOTH SETUP========
-ADDR =
-PORT =
-client = bt.BluetoothClient()
+USE_SERVER = True
+if USE_SERVER:
+    uuid = "1a7f34ab"  # arbitrary code to identify the right service
+
+    data_start_code = 100  # data codes
+    init_start_code = 101
+    end_code = 255 # indicates end of transmission
+
+    # (byte) start_code : (byte) num_lights : (int) increase_rate : (int) decay_rate : (byte) end_code
+    init_format = "B B I I B"
+
+    # (byte) start_code : (byte) light_1_value --- (byte) light_n_value : (byte) end_code
+    data_format = "B " + "B " * N_lights + "B"
+
+    client = bt.BluetoothClient(uuid)
 # ===============================
 
 class GUI:
@@ -192,20 +205,26 @@ class GUI:
                 MODE = light.Mode(i + 1)  # NB : enum list and dropdown list must be in the same order
 
         # setup lights with new variables
-        for light, (_, low_var, high_var), (_, loudness) in zip(lights, self.light_freq_guis, self.light_loudness_guis):
+        for l, (_, low_var, high_var), (_, loudness) in zip(lights, self.light_freq_guis, self.light_loudness_guis):
             # frequency mode setup
-            light.setup_freq_range_mode((low_var, high_var), MAX_FOURIER, self.beat_increase.get())
+            l.setup_freq_range_mode((int(low_var.get()), int(high_var.get())), MAX_FOURIER, self.beat_increase.get())
 
             # loudness mode setup
-            light.setup_loudness_mode(loudness, LOUDNESS_GRADIENT)
+            l.setup_loudness_mode(loudness.get(), LOUDNESS_GRADIENT)
 
-            # decay, increase rates and low thresh
-            light.DECAY_RATE = self.decay_rate.get()
-            light.LOW_THRESH = self.low_thresh.get()
-            light.INCREASE_RATE = self.increase_rate.get()
+            # mode, decay, increase rates and low thresh
+            l.mode = MODE
+            l.DECAY_RATE = int(self.decay_rate.get())
+            l.LOW_THRESH = int(self.low_thresh.get())
+            l.INCREASE_RATE = int(self.increase_rate.get())
 
         # audio parameters
         TARGET_LEVEL = self.audio_level.get()
+
+        # update_bluetooth
+        if USE_SERVER:
+            init_data = struct.pack(init_format, data_start_code, N_lights, INCREASE_RATE, DECAY_RATE, end_code)
+            client.send(init_data)
 
 
 def callback(indata, frames, time, status):
@@ -227,6 +246,15 @@ def callback(indata, frames, time, status):
         for light_obj in lights:
             # calculate the brightness of each light instance from the sound
             light_obj.set_brightness(fourier=fft, freqs=freqs, loudness=sound_amplitudes[1])
+
+        # send brightnesses to the Raspberry Pi
+        if USE_SERVER:
+            data_list = [l.brightness for l in lights]
+            data_list.insert(0, data_start_code)
+            data_list.append(end_code)
+            data = struct.pack(data_format, *data_list)
+
+            client.send(data)
 
         update_lights = True
 
@@ -276,6 +304,21 @@ if __name__ == "__main__":
 
     if SIMULATE:
         tree.draw_tree(brightnesses)
+
+    # ========BLUETOOTH SERVER CONNECTION========
+    if USE_SERVER:
+        while not client.connected:
+            while not client.found_service:
+                print("Trying to find service ...")
+                client.find_services()
+            print("Trying to connect to bluetooth server ...")
+            client.connect()
+
+    # send the intiialisation info
+        init_data = struct.pack(init_format, data_start_code, N_lights, INCREASE_RATE, DECAY_RATE, end_code)
+        print(init_data)
+        client.send(init_data)
+    # ===========================================
 
     # ========MAIN LOOP========
     with sd.InputStream(device=DEV_ID, channels=1, callback=callback, blocksize=blocksize, samplerate=samplerate):
