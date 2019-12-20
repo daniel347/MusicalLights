@@ -1,7 +1,7 @@
 import math
 import struct
 import time
-import colour_mode.ColourMode
+from colour_mode import ColourMode
 
 import neopixel
 import board
@@ -87,7 +87,7 @@ colour_format = "B B B"
 colour_size = 3
 
 # (byte) end_code  - > no need for format as it will always be a single byte
-
+print("Starting bluetooth server ...")
 server = bt.BluetoothServerSDP(uuid, SERVICE_NAME)
 
 
@@ -129,7 +129,7 @@ def fade_transition(range_val):
     for i in range(start_point, end_point):
         LED_values[i] = tuple([int(round((comp * (i - start_point))/(end_point - start_point))) for comp in gradient])
 
-def set_lights(t,, dt, beat):
+def set_lights(t, dt, beat):
     """"Sets the colour of the lights based on the mode and the time from the start"""
     x = 0
     if colour_mode == ColourMode.spectrum:
@@ -201,33 +201,39 @@ if __name__ == "__main__":
     while True:
         last = now
         now = time.time()
+        
+        first_byte = server.recieve_data(1)
+        if (first_byte != -1):  
+            # if there is data to read
+            code = ord(first_byte)
+            if code == data_start_code:
+                data = server.recieve_data(data_size)
+                tuple_data = struct.unpack(init_format, data)
 
-        code = ord(server.recieve_data(1))
-        if code == data_start_code:
-            data = server.recieve_data(data_size)
-            tuple_data = struct.unpack(init_format, data)
+                if tuple_data[-1] != end_code:
+                    # dont know how to handle this
+                    print("Check digit not correct!")
 
-            if tuple_data[-1] != end_code:
-                # dont know how to handle this
-                print("Check digit not correct!")
+                beat = bool(tuple_data[-2])
+                brightnesses = [tuple_data[i] for i in range(N_lights)]
 
-            beat = bool(tuple_data[-2])
-            brightnesses = [tuple_data[i] for i in range(N_lights)]
+            if code == init_start_code:
+                data = server.recieve_data(init_size)
+                N_lights, INCREASE_RATE, DECAY_RATE, colour_mode, end = struct.unpack(init_format, data)
+                if end != end_code:
+                    # dont know how to handle this
+                    print("Check digit not correct!")
 
-        if code == init_start_code:
-            data = server.recieve_data(init_size)
-            N_lights, INCREASE_RATE, DECAY_RATE, colour_mode, end = struct.unpack(init_format, data)
-            if end != end_code:
-                # dont know how to handle this
-                print("Check digit not correct!")
+            if code == colour_set_start_code:
+                num_colours, = struct.unpack(colour_start_format, server.recieve_data(colour_start_size))
 
-        if code == colour_set_start_code:
-            num_colours, = struct.unpack(colour_start_format, server.recieve_data(colour_start_size))
+                for i in range(num_colours):
+                    colour_data = server.recieve_data(colour_size)
+                    colours[i] = struct.unpack(colour_format, colour_data)
 
-            for i in range(num_colours):
-                colour_data = server.recieve_data(colour_size)
-                colours[i] = struct.unpack(colour_format, colour_data)
-
-            if ord(server.recieve_data(1)) != end_code:
-                # dont know how to handle this
-                print("Check digit not correct")
+                if ord(server.recieve_data(1)) != end_code:
+                    # dont know how to handle this
+                    print("Check digit not correct")
+                    
+        set_lights(now - start, now - last, beat)
+        update_neopixels()
