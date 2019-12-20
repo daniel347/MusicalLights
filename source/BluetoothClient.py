@@ -10,7 +10,7 @@ class BluetoothClientSDP():
 
 		if self.find_services() == -1:
 			return
-		else
+		else:
 			self.connect()
 
 	def find_services(self):
@@ -32,7 +32,7 @@ class BluetoothClientSDP():
 		# take the first match found - should be the only one!
 		self.port = matches[0]["port"]
 		self.name = matches[0]["name"]
-		self.host = matches[0]["host"
+		self.host = matches[0]["host"]
 
 		self.found_service = True
 

@@ -50,7 +50,9 @@ alternating_T = 1  # time to change from one colour to the next
 colour_index = 0  # the index of the colour being used right now
 beat = False
 
-colour_mode
+
+colours = [(255,0,0), (0,255,0), (0,0,255)]
+colour_mode = ColourMode.spectrum
 
 # =====================================
 

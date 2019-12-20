@@ -11,7 +11,7 @@ import dsp
 import light
 from colour_mode import ColourMode
 import christmas_tree_sim as sim
-import BluetoothClient as bt
+# import BluetoothClient as bt
 
 # ========PROFILING========
 pr = cProfile.Profile()
@@ -49,6 +49,7 @@ for l, v in zip(lights, loudness_levels):
     l.setup_loudness_mode(v, LOUDNESS_GRADIENT)
 
 # colour modes
+colours = [(255,0,0), (0,255,0), (0,0,255)]
 colour_mode = ColourMode.spectrum
 # ======================
 
@@ -76,7 +77,7 @@ stop_callback = False
 # ================================
 
 # ========BLUETOOTH SETUP========
-USE_SERVER = True
+USE_SERVER = False
 if USE_SERVER:
     uuid = "1a7f34ab"  # arbitrary code to identify the right service
 
@@ -109,11 +110,11 @@ class GUI:
         self.mode_label = Label(window, text="Mode")
         self.mode_label.grid(column=1, row=0)
 
-        self.mode_dropdown = Combobox(window)
+        self.colour_mode_dropdown = Combobox(window)
         self.mode_dropdown_options = ("Frequency Range", "Loudness")
-        self.mode_dropdown['values'] = self.mode_dropdown_options
-        self.mode_dropdown.current(0)
-        self.mode_dropdown.grid(column=1, row=1)
+        self.colour_mode_dropdown['values'] = self.mode_dropdown_options
+        self.colour_mode_dropdown.current(0)
+        self.colour_mode_dropdown.grid(column=1, row=1)
 
         # Frequency ranges
         self.freq_range_title = Label(window, text="Light Frequency Ranges", font=("Helvetica", 16))
@@ -121,18 +122,18 @@ class GUI:
 
         self.light_freq_guis = []
         self.light_freq_vars = []
-        for i, range in enumerate(light_freq_ranges):
-            low_var = IntVar().set(range[0])
+        for i, r in enumerate(light_freq_ranges):
+            low_var = IntVar().set(r[0])
             low_range = Spinbox(window, from_=0, to=2000, width=10, textvariable=low_var)
-            low_range.set(range[0])
+            low_range.set(r[0])
             low_range.grid(column=0, row=(3 + i), sticky=E)
 
             light_name = Label(window, text=("Light " + str(i)))
             light_name.grid(column=1, row=(3 + i))
 
-            high_var = IntVar().set(range[1])
+            high_var = IntVar().set(r[1])
             high_range = Spinbox(window, from_=0, to=2000, width=10, textvariable=high_var)
-            high_range.set(range[1])
+            high_range.set(r[1])
             high_range.grid(column=2, row=(3 + i), sticky=W)
 
             self.light_freq_guis.append((light_name, low_range, high_range))
@@ -204,9 +205,63 @@ class GUI:
         self.audio_level.set(TARGET_LEVEL)
         self.audio_level.grid(column=1, row=(12 + 2*N_lights))
 
+        # Colour params
+        self.colour_title = Label(window, text="Colour Settings", font=("Helvetica", 16))
+        self.colour_title.grid(column=1, row=13 + 2*N_lights)
+
+        self.colour_mode_label = Label(window, text="Colour Mode")
+        self.colour_mode_label.grid(column=1, row=14 + 2*N_lights)
+
+        self.colour_mode_dropdown = Combobox(window)
+        self.colour_mode_dropdown_options = ("Spectrum", "Single Colour", "Alternating", "Beat Based")
+        self.colour_mode_dropdown['values'] = self.colour_mode_dropdown_options
+        self.colour_mode_dropdown.current(0)
+        self.colour_mode_dropdown.grid(column=1, row=15 + 2 * N_lights)
+
+        # Colour add to list
+        self.colour_add_label = Label(window, text="add new colour")
+        self.colour_add_label.grid(column=0, row=16 + 2*N_lights, rowspan=3, sticky=N + S)
+
+        self.colour_index = Spinbox(window, from_=0, to=5, width=10)
+        self.colour_index.set(0)
+        self.colour_index.grid(column=1, row=16 + 2*N_lights, rowspan=3, sticky=N + S)
+
+        # TODO: Make a function which puts the sliders in the right place when colour index is changed
+
+        self.RGB_sliders = []
+        for i in range(3):
+            # make sliders for each component of the colour
+            comp = Scale(window, orient=HORIZONTAL, length=100, from_=0.0, to=255.0)
+            comp.set(int(self.colour_index.get()))
+            comp.grid(column=1, row=(16 + N_lights + i))
+            self.RGB_sliders.append(comp)
+
+        self.update_colour_button = Button(window, text="Add to Colour List", width=50, command=self.update_colours)
+        self.update_colour_button.grid(column=1, row=19 + 2 * N_lights)
+
+        # TODO: Add a delete colour button to reduce the number of colour in colours
+
         # update button
         self.update_button = Button(window, text="Update Parameters", width=50, command=self.update_parameters)
-        self.update_button.grid(column=1, row=13 + 2 * N_lights)
+        self.update_button.grid(column=1, row=20 + 2 * N_lights)
+
+    def update_colours(self):
+        colours[int(self.colour_index.get())] = (int(self.RGB_sliders[0].get()),
+                                                 int(self.RGB_sliders[1].get()),
+                                                 int(self.RGB_sliders[2].get()))
+
+        if USE_SERVER:
+            set_colour_data = struct.pack(colour_start_format, colour_set_start_code, len(colours))
+            client.send(set_colour_data)
+
+            for c in colours:
+                colour_data = struct.pack(colour_format, c[0], c[1], c[2])
+                client.send(colour_data)
+
+            colour_end = struct.pack(colour_end_format, end_code)
+            client.send(colour_end)
+        else:
+            print(colours)  # for debug
 
     def update_parameters(self):
         print("Button pressed")
@@ -214,7 +269,7 @@ class GUI:
 
         # update mode
         for i, mode in enumerate(self.mode_dropdown_options):
-            if (self.mode_dropdown.get() == mode):
+            if (self.colour_mode_dropdown.get() == mode):
                 MODE = light.Mode(i + 1)  # NB : enum list and dropdown list must be in the same order
 
         # setup lights with new variables
@@ -233,6 +288,7 @@ class GUI:
 
         # audio parameters
         TARGET_LEVEL = self.audio_level.get()
+
 
         # update_bluetooth
         if USE_SERVER:
