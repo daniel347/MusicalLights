@@ -2,9 +2,9 @@ import bluetooth
 
 class BluetoothServerSDP:
 
-	def __init___(self, uuid, service_name):
+	def __init__(self, uuid, service_name):
 		self.socket = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
-		self.port = bluetooth.get_available_port(bluetooth.RFCOMM)
+		self.port = 0
 
 		try:
 			self.socket.bind(("", self.port))
@@ -22,9 +22,9 @@ class BluetoothServerSDP:
 	def send_data(self, data):
 			
 		try:
-			self.socket.send(data)
+			self.client_socket.send(data)
 		except bluetooth.BluetoothError:
-			print "ERROR: send failed"
+			print("ERROR: send failed")
 			return -1
 
 		return 1
@@ -32,9 +32,9 @@ class BluetoothServerSDP:
 	def recieve_data(self, recv_size):
 
 		try:
-			data = self.socket.recv(recv_size)
+			data = self.client_socket.recv(recv_size)
 		except bluetooth.BluetoothError:
-			print "ERROR: recieve failed"
+			print("ERROR: recieve failed")
 			return -1
 
 		return data
