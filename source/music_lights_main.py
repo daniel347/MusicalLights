@@ -6,6 +6,7 @@ import cProfile
 from tkinter import *
 from tkinter.ttk import *
 import struct
+import pygame
 
 import dsp
 import light
@@ -84,6 +85,7 @@ if USE_SERVER:
     data_start_code = 100  # data codes
     init_start_code = 101
     colour_set_start_code = 102
+    shutdown_code = 103
     end_code = 255 # indicates end of transmission
 
     # (byte) start_code : (byte) num_lights : (int) increase_rate : (int) decay_rate : (byte) colour_mode : (byte) end_code
@@ -101,6 +103,8 @@ if USE_SERVER:
 
     client = bt.BluetoothClient(uuid)
 # ===============================
+
+stop = False  # shuts down everything
 
 class GUI:
 
@@ -143,92 +147,92 @@ class GUI:
 
         # Loudness values
         self.loudness_title = Label(window, text="Loudness Cut-offs", font=("Helvetica", 16))
-        self.loudness_title.grid(column=1, row=4 + N_lights)
+        self.loudness_title.grid(column=1, row=3 + N_lights)
 
         self.light_loudness_guis = []
         self.light_loudness_vars = []
         for i, loudness in enumerate(loudness_levels):
             light_name = Label(window, text=("Light " + str(i)))
-            light_name.grid(column=0, row=(6 + N_lights + i))
+            light_name.grid(column=0, row=(4 + N_lights + i))
 
             loudness_var = DoubleVar().set(loudness)
             l = Scale(window, orient=HORIZONTAL, length=100, from_=0.0, to=20.0, variable=loudness_var)
             l.set(loudness)
-            l.grid(column=1, row=(6 + N_lights + i))
+            l.grid(column=1, row=(4 + N_lights + i))
 
             self.light_loudness_vars.append(loudness_var)
             self.light_loudness_guis.append((light_name, l))
 
         self.light_param_title = Label(window, text="Other Light Parameters", font=("Helvetica", 16))
-        self.loudness_title.grid(column=1, row=7 + 2*N_lights)
+        self.loudness_title.grid(column=1, row=4 + 2*N_lights)
 
         # Low threshold
         self.low_thresh_label = Label(window, text="Light Low Threshold ")
-        self.low_thresh_label.grid(column=0, row=(9 + 2*N_lights))
+        self.low_thresh_label.grid(column=0, row=(5 + 2*N_lights))
 
         self.low_thresh_var = IntVar().set(LOW_THRESH)
         self.low_thresh = Spinbox(window, from_=0, to=255, width=10, textvariable=self.low_thresh_var)
         self.low_thresh.set(LOW_THRESH)
-        self.low_thresh.grid(column=1, row=(9 + 2*N_lights))
+        self.low_thresh.grid(column=1, row=(5 + 2*N_lights))
 
         # Decay rate
         self.decay_rate_label = Label(window, text="Light Decay Rate")
-        self.decay_rate_label.grid(column=0, row=(10 + 2 * N_lights))
+        self.decay_rate_label.grid(column=0, row=(6 + 2 * N_lights))
 
         self.decay_rate_var = IntVar().set(LOW_THRESH)
         self.decay_rate = Spinbox(window, from_=0, to=500, width=10, textvariable=self.decay_rate_var)
         self.decay_rate.set(DECAY_RATE)
-        self.decay_rate.grid(column=1, row=(10 + 2 * N_lights))
+        self.decay_rate.grid(column=1, row=(6 + 2 * N_lights))
 
         # Increase rate
         self.increase_rate_label = Label(window, text="Light increase Rate")
-        self.increase_rate_label.grid(column=0, row=(10 + 2 * N_lights))
+        self.increase_rate_label.grid(column=0, row=(7 + 2 * N_lights))
 
         self.increase_rate_var = IntVar().set(LOW_THRESH)
         self.increase_rate = Spinbox(window, from_=0, to=255, width=10, textvariable=self.increase_rate_var)
         self.increase_rate.set(DECAY_RATE)
-        self.increase_rate.grid(column=1, row=(10 + 2 * N_lights))
+        self.increase_rate.grid(column=1, row=(7 + 2 * N_lights))
 
         # Beat increase
         self.beat_increase_label = Label(window, text="Increase Brightness on Beat")
-        self.beat_increase_label.grid(column=0, row=(11 + 2 * N_lights))
+        self.beat_increase_label.grid(column=0, row=(8 + 2 * N_lights))
 
         self.beat_increase_var = IntVar().set(LOW_THRESH)
         self.beat_increase = Spinbox(window, from_=0, to=255, width=10, textvariable=self.beat_increase_var)
         self.beat_increase.set(BEAT_INCREASE)
-        self.beat_increase.grid(column=1, row=(11 + 2 * N_lights))
+        self.beat_increase.grid(column=1, row=(8 + 2 * N_lights))
 
         # Audio Level
         self.audio_level_label = Label(window, text="Target Audio Level")
-        self.audio_level_label.grid(column=0, row=(12 + 2 * N_lights))
+        self.audio_level_label.grid(column=0, row=(9 + 2 * N_lights))
 
         self.audio_level_var = DoubleVar().set(TARGET_LEVEL)
         self.audio_level = Scale(window, orient=HORIZONTAL, length=200, from_=0.0, to=100.0, variable=self.audio_level_var)
         self.audio_level.set(TARGET_LEVEL)
-        self.audio_level.grid(column=1, row=(12 + 2*N_lights))
+        self.audio_level.grid(column=1, row=(9 + 2*N_lights))
 
         # Colour params
         self.colour_title = Label(window, text="Colour Settings", font=("Helvetica", 16))
-        self.colour_title.grid(column=1, row=13 + 2*N_lights)
+        self.colour_title.grid(column=1, row=10 + 2*N_lights)
 
         self.colour_mode_label = Label(window, text="Colour Mode")
-        self.colour_mode_label.grid(column=1, row=14 + 2*N_lights)
+        self.colour_mode_label.grid(column=1, row=11 + 2*N_lights)
 
         self.colour_mode_dropdown = Combobox(window)
         self.colour_mode_dropdown_options = ("Spectrum", "Single Colour", "Alternating", "Beat Based")
         self.colour_mode_dropdown['values'] = self.colour_mode_dropdown_options
         self.colour_mode_dropdown.current(0)
-        self.colour_mode_dropdown.grid(column=1, row=15 + 2 * N_lights)
+        self.colour_mode_dropdown.grid(column=1, row=12 + 2 * N_lights)
 
         # Colour add to list
         self.colour_add_label = Label(window, text="add new colour")
-        self.colour_add_label.grid(column=0, row=16 + 2*N_lights, rowspan=3, sticky=N + S)
+        self.colour_add_label.grid(column=0, row=13 + 2*N_lights, rowspan=3, sticky=N + S)
 
         self.colour_index_var = IntVar()
         self.colour_index_var.set(0)
         self.colour_index = Spinbox(window, from_=0, to=5, width=10, textvariable=self.colour_index_var)
         self.colour_index.set(0)
-        self.colour_index.grid(column=1, row=16 + 2*N_lights, rowspan=3, sticky=N + S)
+        self.colour_index.grid(column=1, row=13 + 2*N_lights, rowspan=3, sticky=N + S)
 
         self.colour_index_var.trace('w', self.set_colour_siders)
 
@@ -237,18 +241,31 @@ class GUI:
             # make sliders for each component of the colour
             comp = Scale(window, orient=HORIZONTAL, length=100, from_=0.0, to=255.0)
             comp.set(int(self.colour_index.get()))
-            comp.grid(column=1, row=(16 + N_lights + i))
+            comp.grid(column=1, row=(14 + N_lights + i))
             self.RGB_sliders.append(comp)
 
         self.remove_colour_button = Button(window, text="Remove from Colour List", width=50, command=self.remove_colour)
-        self.remove_colour_button.grid(column=2, row=19 + 2 * N_lights)
+        self.remove_colour_button.grid(column=0, row=17 + 2 * N_lights)
 
         self.update_colour_button = Button(window, text="Add to Colour List", width=50, command=self.add_colour)
-        self.update_colour_button.grid(column=2, row=19 + 2 * N_lights)
+        self.update_colour_button.grid(column=2, row=18 + 2 * N_lights)
 
         # update button
         self.update_button = Button(window, text="Update Parameters", width=50, command=self.update_parameters)
-        self.update_button.grid(column=1, row=20 + 2 * N_lights)
+        self.update_button.grid(column=0, row=19 + 2 * N_lights, columnspan=3, sticky=E + W)
+
+        # shut-down button
+        self.shut_down_button = Button(window, text="Shutdown", width=50, command=self.shutdown)
+        self.shut_down_button.grid(column=0, row=20 + 2 * N_lights, columnspan=3, sticky=E + W)
+
+    def shutdown(self):
+        global stop
+        if USE_SERVER:
+            client.send(struct.pack("B", shutdown_code))  # setup shutdown code
+            client.close_socket()
+
+        tree.close_sim()
+        stop = True
 
     def set_colour_siders(self):
         i = int(self.colour_index.get())
@@ -297,6 +314,7 @@ class GUI:
 
             # loudness mode setup
             l.setup_loudness_mode(loudness.get(), LOUDNESS_GRADIENT)
+            print("updating light settings")
 
             # mode, decay, increase rates and low thresh
             l.mode = MODE
@@ -351,6 +369,9 @@ def callback(indata, frames, time, status):
     else:
         print('no input', flush=True)
 
+    if stop:
+        raise sd.CallbackStop  # ends the callback
+
 
 def update_gain(rms_amplitude):
     """function for adaptive audio gain"""
@@ -368,16 +389,25 @@ def main_loop(window, dt):
     brightnesses = [l.decay_grow(dt) for l in lights]  # calculate the decay or grow of the lights
 
     if SIMULATE:  # if running the simulation, update this
-        tree.draw_tree(brightnesses)
-    window.after(dt, main_loop, window, dt)
+        try:
+            tree.draw_tree(brightnesses)
+        except pygame.error:
+            if stop:  # during shutdown the simulator may have been killed before the main loop
+                pass
+            else:
+                print("ERROR: pygame error in simulation")
 
+    if stop:
+        window.destroy()
+    else:
+        window.after(dt, main_loop, window, dt)
 
 if __name__ == "__main__":
 
     # ========GUI========
     window = Tk()
     window.title("Musical Lights")
-    window.geometry('600x500')
+    window.geometry('800x800')
 
     gui = GUI(window)
     # ===================

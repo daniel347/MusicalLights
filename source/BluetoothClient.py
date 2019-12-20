@@ -70,3 +70,6 @@ class BluetoothClientSDP():
 			return -1
 		
 		return 1
+
+	def close_socket(self):
+		self.socket.close()

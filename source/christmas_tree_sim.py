@@ -56,5 +56,9 @@ class ChristmasTreeSim:
 
         pygame.display.update(self.update_rect)
 
+    def close_sim(self):
+        pygame.display.quit()
+        pygame.quit()
+
 
 
