@@ -106,6 +106,8 @@ class GUI:
 
     def __init__(self, window):
 
+        # TODO : setup pack GUI arrangement and display colours in colour list
+
         # Lighting mode
         self.mode_label = Label(window, text="Mode")
         self.mode_label.grid(column=1, row=0)
@@ -222,11 +224,13 @@ class GUI:
         self.colour_add_label = Label(window, text="add new colour")
         self.colour_add_label.grid(column=0, row=16 + 2*N_lights, rowspan=3, sticky=N + S)
 
-        self.colour_index = Spinbox(window, from_=0, to=5, width=10)
+        self.colour_index_var = IntVar()
+        self.colour_index_var.set(0)
+        self.colour_index = Spinbox(window, from_=0, to=5, width=10, textvariable=self.colour_index_var)
         self.colour_index.set(0)
         self.colour_index.grid(column=1, row=16 + 2*N_lights, rowspan=3, sticky=N + S)
 
-        # TODO: Make a function which puts the sliders in the right place when colour index is changed
+        self.colour_index_var.trace('w', self.set_colour_siders)
 
         self.RGB_sliders = []
         for i in range(3):
@@ -236,20 +240,34 @@ class GUI:
             comp.grid(column=1, row=(16 + N_lights + i))
             self.RGB_sliders.append(comp)
 
-        self.update_colour_button = Button(window, text="Add to Colour List", width=50, command=self.update_colours)
-        self.update_colour_button.grid(column=1, row=19 + 2 * N_lights)
+        self.remove_colour_button = Button(window, text="Remove from Colour List", width=50, command=self.remove_colour)
+        self.remove_colour_button.grid(column=2, row=19 + 2 * N_lights)
 
-        # TODO: Add a delete colour button to reduce the number of colour in colours
+        self.update_colour_button = Button(window, text="Add to Colour List", width=50, command=self.add_colour)
+        self.update_colour_button.grid(column=2, row=19 + 2 * N_lights)
 
         # update button
         self.update_button = Button(window, text="Update Parameters", width=50, command=self.update_parameters)
         self.update_button.grid(column=1, row=20 + 2 * N_lights)
 
-    def update_colours(self):
+    def set_colour_siders(self):
+        i = int(self.colour_index.get())
+        for c, slider in enumerate(self.RGB_sliders):
+            slider.set(colours[i][c])
+
+    def remove_colour(self):
+        colours.pop(int(self.colour_index.get()))
+
+        self.update_colours()
+
+    def add_colour(self):
         colours[int(self.colour_index.get())] = (int(self.RGB_sliders[0].get()),
                                                  int(self.RGB_sliders[1].get()),
                                                  int(self.RGB_sliders[2].get()))
 
+        self.update_colours()
+
+    def update_colours(self):
         if USE_SERVER:
             set_colour_data = struct.pack(colour_start_format, colour_set_start_code, len(colours))
             client.send(set_colour_data)
