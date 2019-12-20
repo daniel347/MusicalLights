@@ -1,11 +1,12 @@
-import BluetoothServer as bt
+import enum
+import math
 import struct
 import time
-import math
-import enum
 
-import numpy as np
+import neopixel
+import board
 
+import BluetoothServer as bt
 
 # ========LIGHT PARAMETERS========
 DECAY_RATE = 350
@@ -15,6 +16,8 @@ N_lights = 5
 
 brightnesses = [0] * N_lights
 # ================================
+
+# ====NEOPIXEL====
 
 # ========LIGHTSTRIP PARAMETERS========
 N_LEDS = 150
