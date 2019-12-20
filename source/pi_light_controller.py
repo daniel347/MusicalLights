@@ -67,6 +67,7 @@ SERVICE_NAME = "MuscialLights Controller"
 data_start_code = 100  # data codes
 init_start_code = 101
 colour_set_start_code = 102
+shutdown_code = 103
 end_code = 255  # indicates end of transmission
 
 # NB : the start code is read seperately so is removed from these formats
@@ -89,8 +90,6 @@ colour_size = 3
 # (byte) end_code  - > no need for format as it will always be a single byte
 print("Starting bluetooth server ...")
 server = bt.BluetoothServerSDP(uuid, SERVICE_NAME)
-
-
 # ====================================
 
 
@@ -190,8 +189,27 @@ def update_neopixels():
 
     pixels.show()
 
+def startup_pattern():
+    """"Light pattern to play at startup"""
+    start_pattern = [(50, 0, 0),
+                     (75, 100, 0),
+                     (0, 255, 0),
+                     (0, 100, 75),
+                     (0, 0, 50)]  # like a small spectrum wave
+
+    speed = 0.01 # time delay between moving the wave up one pixel
+
+    for wave_pos in range(N_LEDS):
+        for i, c in enumerate(start_pattern):
+            pixels[wave_pos + i] = c
+
+        pixels.show()
+        time.sleep(speed)
+
 if __name__ == "__main__":
 
+    # run LED startup pattern
+    startup_pattern()
 
     start = time.time()
     last = time.time()
@@ -217,14 +235,14 @@ if __name__ == "__main__":
                 beat = bool(tuple_data[-2])
                 brightnesses = [tuple_data[i] for i in range(N_lights)]
 
-            if code == init_start_code:
+            elif code == init_start_code:
                 data = server.recieve_data(init_size)
                 N_lights, INCREASE_RATE, DECAY_RATE, colour_mode, end = struct.unpack(init_format, data)
                 if end != end_code:
                     # dont know how to handle this
                     print("Check digit not correct!")
 
-            if code == colour_set_start_code:
+            elif code == colour_set_start_code:
                 num_colours, = struct.unpack(colour_start_format, server.recieve_data(colour_start_size))
 
                 for i in range(num_colours):
@@ -234,6 +252,10 @@ if __name__ == "__main__":
                 if ord(server.recieve_data(1)) != end_code:
                     # dont know how to handle this
                     print("Check digit not correct")
+
+            elif code == shutdown_code:
+                server.close_socket()
+                pixels.fill((0,0,0))
                     
         set_lights(now - start, now - last, beat)
         update_neopixels()
