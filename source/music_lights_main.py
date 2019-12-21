@@ -12,7 +12,8 @@ import dsp
 import light
 from colour_mode import ColourMode
 import christmas_tree_sim as sim
-# import BluetoothClient as bt
+
+import BluetoothClient as bt
 
 # ========PROFILING========
 pr = cProfile.Profile()
@@ -54,16 +55,6 @@ colours = [(255,0,0), (0,255,0), (0,0,255)]
 colour_mode = ColourMode.spectrum
 # ======================
 
-# ========SIMULATION========
-SIMULATE = True
-brightnesses = [10] * N_lights
-if SIMULATE:
-    tree = sim.ChristmasTreeSim(N_lights)  # start the simulation of the tree
-
-UPDATE_PERIOD = 25  # time between successive frames in ms
-# ==========================
-
-
 # ========AUDIO PARAMETERS========
 DEV_ID = -1
 BLOCK_DUR = 100  # by default, take 50ms chunks and feed them into the Fourier transform
@@ -78,7 +69,7 @@ stop_callback = False
 # ================================
 
 # ========BLUETOOTH SETUP========
-USE_SERVER = False
+USE_SERVER = True
 if USE_SERVER:
     uuid = "1a7f34ab"  # arbitrary code to identify the right service
 
@@ -101,8 +92,18 @@ if USE_SERVER:
     # (byte) end_code
     colour_end_format = "B"
 
-    client = bt.BluetoothClient(uuid)
+    print("Connecting bluetooth ...")
+    client = bt.BluetoothClientSDP(uuid)
 # ===============================
+
+# ========SIMULATION========
+SIMULATE = True
+brightnesses = [10] * N_lights
+if SIMULATE:
+    tree = sim.ChristmasTreeSim(N_lights)  # start the simulation of the tree
+
+UPDATE_PERIOD = 25  # time between successive frames in ms
+# ==========================
 
 stop = False  # shuts down everything
 
