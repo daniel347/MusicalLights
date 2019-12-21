@@ -116,11 +116,11 @@ class GUI:
         self.mode_label = Label(window, text="Mode")
         self.mode_label.grid(column=1, row=0)
 
-        self.colour_mode_dropdown = Combobox(window)
+        self.mode_dropdown = Combobox(window)
         self.mode_dropdown_options = ("Frequency Range", "Loudness")
-        self.colour_mode_dropdown['values'] = self.mode_dropdown_options
-        self.colour_mode_dropdown.current(0)
-        self.colour_mode_dropdown.grid(column=1, row=1)
+        self.mode_dropdown['values'] = self.mode_dropdown_options
+        self.mode_dropdown.current(0)
+        self.mode_dropdown.grid(column=1, row=1)
 
         # Frequency ranges
         self.freq_range_title = Label(window, text="Light Frequency Ranges", font=("Helvetica", 16))
@@ -248,15 +248,15 @@ class GUI:
         self.remove_colour_button.grid(column=0, row=17 + 2 * N_lights)
 
         self.update_colour_button = Button(window, text="Add to Colour List", width=50, command=self.add_colour)
-        self.update_colour_button.grid(column=2, row=18 + 2 * N_lights)
+        self.update_colour_button.grid(column=2, row=17 + 2 * N_lights)
 
         # update button
         self.update_button = Button(window, text="Update Parameters", width=50, command=self.update_parameters)
-        self.update_button.grid(column=0, row=19 + 2 * N_lights, columnspan=3, sticky=E + W)
+        self.update_button.grid(column=0, row=18 + 2 * N_lights, columnspan=3, sticky=E + W)
 
         # shut-down button
         self.shut_down_button = Button(window, text="Shutdown", width=50, command=self.shutdown)
-        self.shut_down_button.grid(column=0, row=20 + 2 * N_lights, columnspan=3, sticky=E + W)
+        self.shut_down_button.grid(column=0, row=19 + 2 * N_lights, columnspan=3, sticky=E + W)
 
     def shutdown(self):
         global stop
@@ -304,8 +304,9 @@ class GUI:
 
         # update mode
         for i, mode in enumerate(self.mode_dropdown_options):
-            if (self.colour_mode_dropdown.get() == mode):
+            if (self.mode_dropdown.get() == mode):
                 MODE = light.Mode(i + 1)  # NB : enum list and dropdown list must be in the same order
+
 
         # setup lights with new variables
         for l, (_, low_var, high_var), (_, loudness) in zip(lights, self.light_freq_guis, self.light_loudness_guis):
