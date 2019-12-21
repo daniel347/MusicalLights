@@ -71,7 +71,7 @@ stop_callback = False
 # ========BLUETOOTH SETUP========
 USE_SERVER = True
 if USE_SERVER:
-    uuid = "1a7f34ab"  # arbitrary code to identify the right service
+    uuid = "94f39d29-7d6d-437d-973b-fba39e49d4ee" # arbitrary code to identify the right service
 
     data_start_code = 100  # data codes
     init_start_code = 101
