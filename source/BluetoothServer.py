@@ -1,8 +1,12 @@
 import bluetooth
+import time
 
 class BluetoothServerSDP:
 
-	def __init__(self, uuid, service_name):
+	def __init__(self, uuid, service_name, timeout):
+		# timeout for read and write operations
+		self.timeout = timeout
+
 		self.socket = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
 		self.port = bluetooth.PORT_ANY
 
@@ -36,15 +40,22 @@ class BluetoothServerSDP:
 		return 1
 				
 	def recieve_data(self, recv_size):
+		""""Function to continue recieving data until the requested ammount is obtained"""
 
-		data=''
+		data = bytearray()  # recv returns a bytes object, which is appended to bytearray
+
+		start_time = time.time()
 		while len(data) < recv_size:
 			try:
-				data += self.client_socket.recv(recv_size - len(data))
+				data.append(self.client_socket.recv(recv_size - len(data)))
 			except bluetooth.BluetoothError:
 				print("ERROR: recieve failed")
+			if (time.time() - start_time) > self.timeout:
+				print("ERROR: timeout occured")
+				return -1
 
-		return data
+		# final array returned as a bytes object
+		return bytes(data)
 
 	def close_socket(self):
 		self.client_socket.close()
