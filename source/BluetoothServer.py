@@ -5,7 +5,7 @@ class BluetoothServerSDP:
 
 	def __init__(self, uuid, service_name, timeout):
 		# timeout for read and write operations
-		self.timeout = timeout
+		self.timeout = timeout  # timeout in seconds
 
 		self.socket = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
 		self.port = bluetooth.PORT_ANY

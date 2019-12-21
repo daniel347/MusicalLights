@@ -90,7 +90,8 @@ colour_size = 3
 
 # (byte) end_code  - > no need for format as it will always be a single byte
 print("Starting bluetooth server ...")
-server = bt.BluetoothServerSDP(uuid, SERVICE_NAME)
+TIMEOUT = 1  # timeout for read operations in seconds
+server = bt.BluetoothServerSDP(uuid, SERVICE_NAME, )
 # ====================================
 
 
