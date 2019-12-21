@@ -15,7 +15,6 @@ class BluetoothClientSDP():
             self.connect()
 
     def find_services(self):
-        print(bluetooth.find_service())
         try:
             matches = bluetooth.find_service(uuid=self.uuid)
         except bluetooth.BluetoothError:
@@ -44,9 +43,9 @@ class BluetoothClientSDP():
         """attempts to connect the client to the address and port setup in init"""
         try:
             self.socket = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
-            self.socket.connect((self.addr, self.port))
+            self.socket.connect((self.host, 1))
             self.connected = True
-        except BluetoothError:
+        except bluetooth.BluetoothError:
             print("ERROR: Failed to connect socket")
             self.connected = False
             return -1

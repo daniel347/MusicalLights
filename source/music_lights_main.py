@@ -262,7 +262,7 @@ class GUI:
     def shutdown(self):
         global stop
         if USE_SERVER:
-            client.send(struct.pack("B", shutdown_code))  # setup shutdown code
+            client.send_data(struct.pack("B", shutdown_code))  # setup shutdown code
             client.close_socket()
 
         tree.close_sim()
@@ -288,14 +288,14 @@ class GUI:
     def update_colours(self):
         if USE_SERVER:
             set_colour_data = struct.pack(colour_start_format, colour_set_start_code, len(colours))
-            client.send(set_colour_data)
+            client.send_data(set_colour_data)
 
             for c in colours:
                 colour_data = struct.pack(colour_format, c[0], c[1], c[2])
-                client.send(colour_data)
+                client.send_data(colour_data)
 
             colour_end = struct.pack(colour_end_format, end_code)
-            client.send(colour_end)
+            client.send_data(colour_end)
         else:
             print(colours)  # for debug
 
@@ -331,7 +331,7 @@ class GUI:
         # update_bluetooth
         if USE_SERVER:
             init_data = struct.pack(init_format, data_start_code, N_lights, INCREASE_RATE, DECAY_RATE, end_code)
-            client.send(init_data)
+            client.send_data(init_data)
 
 
 def callback(indata, frames, time, status):
@@ -363,8 +363,9 @@ def callback(indata, frames, time, status):
             data_list.append(1 if beat else 0)  # ternary statement may not be necessary
             data_list.append(end_code)
             data = struct.pack(data_format, *data_list)
-
-            client.send(data)
+            print("data")
+            print(data)
+            client.send_data(data)
 
         update_lights = True
 
@@ -435,9 +436,9 @@ if __name__ == "__main__":
             client.connect()
 
     # send the intiialisation info
-        init_data = struct.pack(init_format, data_start_code, N_lights, INCREASE_RATE, DECAY_RATE, int(colour_mode), end_code)
+        init_data = struct.pack(init_format, data_start_code, N_lights, INCREASE_RATE, DECAY_RATE, colour_mode.value, end_code)
         print(init_data)
-        client.send(init_data)
+        client.send_data(init_data)
     # ===========================================
 
     # ========MAIN LOOP========
