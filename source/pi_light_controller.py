@@ -28,6 +28,7 @@ LED_values = [(0,0,0)] * N_LEDS
 
 # ========NEOPIXEL SETUP========
 pixels = neopixel.NeoPixel(board.D18, N_LEDS, auto_write=False)
+pixels.fill((0,150,0))
 
 # ==============================
 
@@ -61,7 +62,7 @@ colour_mode = ColourMode.spectrum
 # =====================================
 
 # ========BLUETOOTH PARAMETERS========
-uuid = "1a7f34ab"  # arbitrary code to identify the right service
+uuid = "94f39d29-7d6d-437d-973b-fba39e49d4ee" # arbitrary code to identify the right service
 SERVICE_NAME = "MuscialLights Controller"
 
 data_start_code = 100  # data codes
@@ -181,7 +182,8 @@ def set_lights(t, dt, beat):
 
 def update_neopixels():
     """Calculates the fade properties for each lED sets the corresponding neopixel value"""
-    for pos in LED_ranges:
+    # remove the last value since we do not need a fade at the end
+    for pos in LED_ranges[:-1]:
         fade_transition(pos)
 
     for pos, val in enumerate(LED_values):
@@ -199,7 +201,8 @@ def startup_pattern():
 
     speed = 0.01 # time delay between moving the wave up one pixel
 
-    for wave_pos in range(N_LEDS):
+    for wave_pos in range(N_LEDS - len(start_pattern)):
+        pixels.fill((0,0,0))
         for i, c in enumerate(start_pattern):
             pixels[wave_pos + i] = c
 
@@ -226,7 +229,8 @@ if __name__ == "__main__":
             code = ord(first_byte)
             if code == data_start_code:
                 data = server.recieve_data(data_size)
-                tuple_data = struct.unpack(init_format, data)
+                print(data)
+                tuple_data = struct.unpack(data_format, data)
 
                 if tuple_data[-1] != end_code:
                     # dont know how to handle this
