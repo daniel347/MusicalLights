@@ -15,6 +15,7 @@ class BluetoothClientSDP():
             self.connect()
 
     def find_services(self):
+        print(bluetooth.find_service())
         try:
             matches = bluetooth.find_service(uuid=self.uuid)
         except bluetooth.BluetoothError:
