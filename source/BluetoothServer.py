@@ -4,7 +4,7 @@ class BluetoothServerSDP:
 
 	def __init__(self, uuid, service_name):
 		self.socket = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
-		self.port = 0
+		self.port = bluetooth.PORT_ANY
 
 		try:
 			self.socket.bind(("", self.port))
@@ -12,10 +12,16 @@ class BluetoothServerSDP:
 			print("ERROR: server bind failed")
 			return
 
-		self.socket.listen(1)  # hopefully blocking
+		self.socket.listen(1)
+	
 
 		self.uuid = uuid  # arbitrary means of identifying the service
-		bluetooth.advertise_service(self.socket, service_name, uuid)
+		bluetooth.advertise_service(self.socket, service_name,
+										service_id = self.uuid,
+										service_classes=[self.uuid, bluetooth.SERIAL_PORT_CLASS],
+										profiles=[bluetooth.SERIAL_PORT_PROFILE])
+		
+		print("port : {}".format(self.socket.getsockname()[1]))
 
 		self.client_socket, self.address = self.socket.accept()
 			
@@ -31,11 +37,12 @@ class BluetoothServerSDP:
 				
 	def recieve_data(self, recv_size):
 
-		try:
-			data = self.client_socket.recv(recv_size)
-		except bluetooth.BluetoothError:
-			print("ERROR: recieve failed")
-			return -1
+		data=''
+		while len(data) < recv_size:
+			try:
+				data += self.client_socket.recv(recv_size - len(data))
+			except bluetooth.BluetoothError:
+				print("ERROR: recieve failed")
 
 		return data
 
