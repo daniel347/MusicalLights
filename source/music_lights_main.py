@@ -80,7 +80,8 @@ if USE_SERVER:
     end_code = 255 # indicates end of transmission
 
     # (byte) start_code : (byte) num_lights : (int) increase_rate : (int) decay_rate : (byte) colour_mode : (byte) end_code
-    init_format = "B B I I B B"
+    init_format = "=B B I I B B"
+    # NB : = turns off byte padding
 
     # (byte) start_code : (byte) light_1_value --- (byte) light_n_value : (byte) beat  (byte) end_code
     data_format = "B " + "B " * N_lights + "B B"
@@ -94,6 +95,7 @@ if USE_SERVER:
 
     print("Connecting bluetooth ...")
     client = bt.BluetoothClientSDP(uuid)
+    time.sleep(1.5)
 # ===============================
 
 # ========SIMULATION========
@@ -261,12 +263,14 @@ class GUI:
 
     def shutdown(self):
         global stop
+        stop = True
+
         if USE_SERVER:
             client.send_data(struct.pack("B", shutdown_code))  # setup shutdown code
+            time.sleep(0.1)  # give the socket time to send
             client.close_socket()
 
         tree.close_sim()
-        stop = True
 
     def set_colour_siders(self):
         i = int(self.colour_index.get())
@@ -286,7 +290,7 @@ class GUI:
         self.update_colours()
 
     def update_colours(self):
-        if USE_SERVER:
+        if USE_SERVER and not stop:
             set_colour_data = struct.pack(colour_start_format, colour_set_start_code, len(colours))
             client.send_data(set_colour_data)
 
@@ -327,10 +331,15 @@ class GUI:
         # audio parameters
         TARGET_LEVEL = self.audio_level.get()
 
+        # update colour mode
+        for i, mode in enumerate(self.colour_mode_dropdown_options):
+            if (self.colour_mode_dropdown.get() == mode):
+                colour_mode = ColourMode(i + 1)  # NB : enum list and dropdown list must be in the same order
+
 
         # update_bluetooth
-        if USE_SERVER:
-            init_data = struct.pack(init_format, data_start_code, N_lights, INCREASE_RATE, DECAY_RATE, end_code)
+        if USE_SERVER and not stop:
+            init_data = struct.pack(init_format, init_start_code, N_lights, INCREASE_RATE, DECAY_RATE, colour_mode.value, end_code)
             client.send_data(init_data)
 
 
@@ -357,7 +366,7 @@ def callback(indata, frames, time, status):
             light_obj.set_brightness(fourier=fft, freqs=freqs, loudness=sound_amplitudes[1])
 
         # send brightnesses to the Raspberry Pi
-        if USE_SERVER:
+        if USE_SERVER and not stop:
             data_list = [l.brightness for l in lights]
             data_list.insert(0, data_start_code)
             data_list.append(1 if beat else 0)  # ternary statement may not be necessary
@@ -427,7 +436,7 @@ if __name__ == "__main__":
         tree.draw_tree(brightnesses)
 
     # ========BLUETOOTH SERVER CONNECTION========
-    if USE_SERVER:
+    if USE_SERVER and not stop:
         while not client.connected:
             while not client.found_service:
                 print("Trying to find service ...")
@@ -436,7 +445,8 @@ if __name__ == "__main__":
             client.connect()
 
     # send the intiialisation info
-        init_data = struct.pack(init_format, data_start_code, N_lights, INCREASE_RATE, DECAY_RATE, colour_mode.value, end_code)
+        init_data = struct.pack(init_format, init_start_code, N_lights, INCREASE_RATE, DECAY_RATE, colour_mode.value, end_code)
+        print(struct.unpack(init_format, init_data))
         print(init_data)
         client.send_data(init_data)
     # ===========================================

@@ -91,7 +91,9 @@ colour_size = 3
 # (byte) end_code  - > no need for format as it will always be a single byte
 print("Starting bluetooth server ...")
 TIMEOUT = 1  # timeout for read operations in seconds
-server = bt.BluetoothServerSDP(uuid, SERVICE_NAME, )
+server = bt.BluetoothServerSDP(uuid, SERVICE_NAME, TIMEOUT)
+time.sleep(1.5)  # wait for startup sequence on pi
+# TODO : read an acknowldegement bit from the pi after each send to better keep in time
 # ====================================
 
 
