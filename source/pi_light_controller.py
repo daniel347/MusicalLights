@@ -2,6 +2,7 @@ import math
 import struct
 import time
 from colour_mode import ColourMode
+import sys
 
 import neopixel
 import board
@@ -26,10 +27,34 @@ FADE = 5  # fade 5 leds from each side of the boundary between two light groups 
 LED_values = [(0,0,0)] * N_LEDS
 # =====================================
 
+# ========STARTUP SEQUENCE========
+
+def startup_pattern():
+    """"Light pattern to play at startup"""
+    start_pattern = [(50, 0, 0),
+                     (75, 100, 0),
+                     (0, 255, 0),
+                     (0, 100, 75),
+                     (0, 0, 50)]  # like a small spectrum wave
+
+    speed = 0.01 # time delay between moving the wave up one pixel
+
+    for wave_pos in range(N_LEDS - len(start_pattern)):
+        pixels.fill((0,0,0))
+        for i, c in enumerate(start_pattern):
+            pixels[wave_pos + i] = c
+
+        pixels.show()
+        time.sleep(speed)
+        
+# =================================
+
 # ========NEOPIXEL SETUP========
 pixels = neopixel.NeoPixel(board.D18, N_LEDS, auto_write=False)
-pixels.fill((0,150,0))
+startup_pattern()
 
+MAX_CHANNEL = 255
+MIN_CHANNEL = 0
 # ==============================
 
 # ========COLOUR MODE OPTIONS========
@@ -73,12 +98,12 @@ end_code = 255  # indicates end of transmission
 
 # NB : the start code is read seperately so is removed from these formats
 # (byte) num_lights : (int) increase_rate : (int) decay_rate : (byte) colour_mode : (byte) end_code
-init_format = "B I I B B"
+init_format = "=B I I B B"
 init_size = 11  # 3 bytes and 2 4 byte ints
 
-# (byte) start_code : (byte) light_1_value --- (byte) light_n_value : (byte) beat : (byte) end_code
+# (byte) light_1_value --- (byte) light_n_value : (byte) beat : (byte) end_code
 data_format = "B " * N_lights + "B B"
-data_size = 1 + N_lights
+data_size = 2 + N_lights
 
 # (byte) num_colours
 colour_start_format = "B"
@@ -92,8 +117,6 @@ colour_size = 3
 print("Starting bluetooth server ...")
 TIMEOUT = 1  # timeout for read operations in seconds
 server = bt.BluetoothServerSDP(uuid, SERVICE_NAME, TIMEOUT)
-time.sleep(1.5)  # wait for startup sequence on pi
-# TODO : read an acknowldegement bit from the pi after each send to better keep in time
 # ====================================
 
 
@@ -105,14 +128,15 @@ def decay_grow_colour(dt, colour_output, colour_setval):
     max_dec = int(round(dt * DECAY_RATE))
     max_inc = int(round(dt * INCREASE_RATE))
 
-    new_colour = []
+    new_colour = [0, 0, 0]
 
     for i, (col_comp, setval) in enumerate(zip(colour_output, colour_setval)):
         if (col_comp - setval) > 0:
             new_colour[i] = col_comp - (max_dec if (col_comp - setval) > max_dec else (col_comp - setval))
         elif (col_comp - setval) < 0:
             new_colour[i] = col_comp + (max_inc if (setval - col_comp) > max_inc else (setval - col_comp))
-
+    
+    # print("new tuple : {}, input tuple : {}".format(tuple(new_colour), colour_setval))
     return tuple(new_colour)
 
 def fade_transition(range_val):
@@ -170,6 +194,8 @@ def set_lights(t, dt, beat):
 
 
     if colour_mode == ColourMode.change_on_beat:
+        global colour_index
+        
         if beat:
             colour_index = (colour_index + 1) % len(colours)
 
@@ -190,9 +216,12 @@ def update_neopixels():
         fade_transition(pos)
 
     for pos, val in enumerate(LED_values):
-        pixels[pos] = val  # set the neopixel values
+        pixels[pos] = constrain_colour(val)  # set the neopixel values
 
     pixels.show()
+    
+def constrain_colour(colour):
+    return tuple([min(MAX_CHANNEL, max(MIN_CHANNEL, c)) for c in colour])
 
 def startup_pattern():
     """"Light pattern to play at startup"""
@@ -232,7 +261,6 @@ if __name__ == "__main__":
             code = ord(first_byte)
             if code == data_start_code:
                 data = server.recieve_data(data_size)
-                print(data)
                 tuple_data = struct.unpack(data_format, data)
 
                 if tuple_data[-1] != end_code:
@@ -245,6 +273,8 @@ if __name__ == "__main__":
             elif code == init_start_code:
                 data = server.recieve_data(init_size)
                 N_lights, INCREASE_RATE, DECAY_RATE, colour_mode, end = struct.unpack(init_format, data)
+                print("N_Lights : {} \n INCREASE_RATE : {} \n DECAY_RATE : {} \n colour_mode : {} \n end : {}".format(N_lights, INCREASE_RATE, DECAY_RATE, colour_mode, end))
+                colour_mode = ColourMode(colour_mode)
                 if end != end_code:
                     # dont know how to handle this
                     print("Check digit not correct!")
@@ -263,6 +293,9 @@ if __name__ == "__main__":
             elif code == shutdown_code:
                 server.close_socket()
                 pixels.fill((0,0,0))
+                update_neopixels()
+                sys.exit()
+                break
                     
         set_lights(now - start, now - last, beat)
         update_neopixels()

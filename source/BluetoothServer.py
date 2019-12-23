@@ -47,7 +47,9 @@ class BluetoothServerSDP:
 		start_time = time.time()
 		while len(data) < recv_size:
 			try:
-				data.append(self.client_socket.recv(recv_size - len(data)))
+				for b in self.client_socket.recv(recv_size - len(data)):
+					# add each byte of data recieved to the bytearray
+					data.append(b)
 			except bluetooth.BluetoothError:
 				print("ERROR: recieve failed")
 			if (time.time() - start_time) > self.timeout:
