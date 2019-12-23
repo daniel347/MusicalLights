@@ -28,6 +28,7 @@ class BluetoothServerSDP:
 		print("port : {}".format(self.socket.getsockname()[1]))
 
 		self.client_socket, self.address = self.socket.accept()
+		self.client_socket.setblocking(0)  # use non blocking sockets
 			
 	def send_data(self, data):
 			
@@ -38,6 +39,15 @@ class BluetoothServerSDP:
 			return -1
 
 		return 1
+
+	def receive_noblock(self, recv_size):
+		"""receives whatever data is in the buffer and returns -1 if no data available"""
+		try:
+			return self.client_socket.recv(recv_size)
+		except bluetooth.BluetoothError:
+			# most likely there is no data in the buffer
+			return -1
+
 				
 	def recieve_data(self, recv_size):
 		""""Function to continue recieving data until the requested ammount is obtained"""
@@ -51,7 +61,8 @@ class BluetoothServerSDP:
 					# add each byte of data recieved to the bytearray
 					data.append(b)
 			except bluetooth.BluetoothError:
-				print("ERROR: recieve failed")
+				print("ERROR: receive failed")
+
 			if (time.time() - start_time) > self.timeout:
 				print("ERROR: timeout occured")
 				return -1

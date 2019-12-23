@@ -55,6 +55,8 @@ startup_pattern()
 
 MAX_CHANNEL = 255
 MIN_CHANNEL = 0
+
+LED_UPDATE_PERIOD = 0.025  # controls the rate at which the brightness of the leds is updated
 # ==============================
 
 # ========COLOUR MODE OPTIONS========
@@ -94,6 +96,7 @@ data_start_code = 100  # data codes
 init_start_code = 101
 colour_set_start_code = 102
 shutdown_code = 103
+# continue_loop_code = 104  # quick way of running the main loop more frequently than the audio processing (for decay)
 end_code = 255  # indicates end of transmission
 
 # NB : the start code is read seperately so is removed from these formats
@@ -142,6 +145,8 @@ def decay_grow_colour(dt, colour_output, colour_setval):
 def fade_transition(range_val):
     """Interpolates linearly at the boundary between light groups for a smooth transition"""
     # NB values of the LEDS at the start and end points of the fade are unchanged
+    # TODO : test with the pi - something seems wrong
+
     start_point = range_val - 1 - FADE
     end_point = range_val - 1 + FADE
 
@@ -150,11 +155,11 @@ def fade_transition(range_val):
     end_col = LED_values[end_point]
 
     # find the change in RGB values from one end of the fade to the other
-    gradient = tuple(e-s for s, e in zip(start_col, end_col))
+    gradient = tuple((e-s)/(2 * FADE) for s, e in zip(start_col, end_col))
 
     # update array for the faded section only
     for i in range(start_point, end_point):
-        LED_values[i] = tuple([int(round((comp * (i - start_point))/(end_point - start_point))) for comp in gradient])
+        LED_values[i] = tuple([int(round(comp * (i - start_point))) for comp in gradient])
 
 def set_lights(t, dt, beat):
     """"Sets the colour of the lights based on the mode and the time from the start"""
@@ -255,7 +260,7 @@ if __name__ == "__main__":
         last = now
         now = time.time()
         
-        first_byte = server.recieve_data(1)
+        first_byte = server.recieve_noblock(1)
         if (first_byte != -1):  
             # if there is data to read
             code = ord(first_byte)
@@ -296,6 +301,7 @@ if __name__ == "__main__":
                 update_neopixels()
                 sys.exit()
                 break
-                    
-        set_lights(now - start, now - last, beat)
-        update_neopixels()
+
+        if now - last > LED_UPDATE_PERIOD:
+            set_lights(now - start, now - last, beat)
+            update_neopixels()
