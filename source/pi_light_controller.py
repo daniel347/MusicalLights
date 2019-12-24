@@ -24,7 +24,8 @@ LED_ranges = [int(math.floor(N_LEDS / N_lights)) * n for n in range(1, N_lights 
 # LED_ranges = [50, 90, 120, 140, 150]  # ie light one is LEDS 1- 50 and so on - needs to be updated for different n
 
 FADE = 5  # fade 5 leds from each side of the boundary between two light groups for a smooth transition
-LED_values = [(0,0,0)] * N_LEDS
+LED_set_values = [(0,0,0)] * N_LEDS  # holds the target values for the pixels based on colour and brightness modes
+LED_values = [(0,0,0)] * N_LEDS  # holds the actual values when the decay_grow and fade is applied
 # =====================================
 
 # ========COLOUR MODE OPTIONS========
@@ -55,6 +56,41 @@ beat = False
 
 colour_mode = ColourMode.spectrum
 # =====================================
+
+# ========STARTUP SEQUENCE========
+
+def startup_pattern():
+    """"Light pattern to play at startup"""
+    start_pattern = [(50, 0, 0),
+                     (75, 100, 0),
+                     (0, 255, 0),
+                     (0, 100, 75),
+                     (0, 0, 50)]  # like a small spectrum wave
+
+    speed = 0.01  # time delay between moving the wave up one pixel
+
+    for wave_pos in range(N_LEDS - len(start_pattern)):
+        pixels.fill((0, 0, 0))
+        for i, c in enumerate(start_pattern):
+            pixels[wave_pos + i] = c
+
+        pixels.show()
+        time.sleep(speed)
+
+# =================================
+
+# ========NEOPIXEL SETUP========
+pixels = neopixel.NeoPixel(board.D18, N_LEDS, auto_write=False)
+startup_pattern()
+
+pixels.fill((255, 0, 255))
+pixels.show()
+
+MAX_CHANNEL = 255
+MIN_CHANNEL = 0
+
+LED_UPDATE_PERIOD = 0.005  # controls the rate at which the brightness of the leds is updated
+# ==============================
 
 # ========BLUETOOTH PARAMETERS========
 uuid = "94f39d29-7d6d-437d-973b-fba39e49d4ee" # arbitrary code to identify the right service
@@ -90,44 +126,8 @@ TIMEOUT = 1  # timeout for read operations in seconds
 server = bt.BluetoothServerSDP(uuid, SERVICE_NAME, TIMEOUT)
 # ====================================
 
-# ========STARTUP SEQUENCE========
-
-def startup_pattern():
-    """"Light pattern to play at startup"""
-    start_pattern = [(50, 0, 0),
-                     (75, 100, 0),
-                     (0, 255, 0),
-                     (0, 100, 75),
-                     (0, 0, 50)]  # like a small spectrum wave
-
-    speed = 0.01  # time delay between moving the wave up one pixel
-
-    for wave_pos in range(N_LEDS - len(start_pattern)):
-        pixels.fill((0, 0, 0))
-        for i, c in enumerate(start_pattern):
-            pixels[wave_pos + i] = c
-
-        pixels.show()
-        time.sleep(speed)
-
-
-# =================================
-
-# ========NEOPIXEL SETUP========
-pixels = neopixel.NeoPixel(board.D18, N_LEDS, auto_write=False)
-startup_pattern()
-
-MAX_CHANNEL = 255
-MIN_CHANNEL = 0
-
-LED_UPDATE_PERIOD = 0.05  # controls the rate at which the brightness of the leds is updated
-
-
-# ==============================
-
-
 def decay_grow_colour(dt, colour_output, colour_setval):
-    """"Smooths out the changes in brightness using the defined decay and grow
+    """"Smoothes out the changes in brightness using the defined decay and grow
     properties to smoothly vary the brightness.
     colour_output is the current value of the lights and colour_setval is the desired value"""
 
@@ -148,8 +148,6 @@ def decay_grow_colour(dt, colour_output, colour_setval):
 def fade_transition(range_val):
     """Interpolates linearly at the boundary between light groups for a smooth transition"""
     # NB values of the LEDS at the start and end points of the fade are unchanged
-    # TODO : test with the pi - something seems wrong
-
     start_point = range_val - 1 - FADE
     end_point = range_val - 1 + FADE
 
@@ -164,7 +162,7 @@ def fade_transition(range_val):
     for i in range(start_point, end_point):
         LED_values[i] = tuple([int(round(start_col[n] + (comp * (i - start_point)))) for n, comp in enumerate(gradient)])
 
-def set_lights(t, dt, beat):
+def set_lights(t, beat):
     """"Sets the colour of the lights based on the mode and the time from the start"""
     x = 0
     if colour_mode == ColourMode.spectrum:
@@ -174,7 +172,7 @@ def set_lights(t, dt, beat):
                            int(round(green(t, x) * brightnesses[i])),
                            int(round(blue(t, x) * brightnesses[i])))  # rgb tuple for LED x
 
-                LED_values[x] = decay_grow_colour(dt, LED_values[x], LED_val)
+                LED_set_values[x] = LED_val
                 x += 1
 
     if colour_mode == ColourMode.single_colour:
@@ -186,7 +184,7 @@ def set_lights(t, dt, beat):
                            int(round((c[1] * brightnesses[i]) / 255)),
                            int(round((c[2] * brightnesses[i]) / 255)))
 
-                LED_values[x] = decay_grow_colour(dt, LED_values[x], LED_val)
+                LED_set_values[x] = LED_val
                 x += 1
 
     if colour_mode == ColourMode.alternating_two:
@@ -197,7 +195,7 @@ def set_lights(t, dt, beat):
                            int(round((c[1] * brightnesses[i]) / 255)),
                            int(round((c[2] * brightnesses[i]) / 255)))
 
-                LED_values[x] = decay_grow_colour(dt, LED_values[x], LED_val)
+                LED_set_values[x] = LED_val
                 x += 1
 
 
@@ -214,11 +212,15 @@ def set_lights(t, dt, beat):
                            int(round((c[1] * brightnesses[i]) / 255)),
                            int(round((c[2] * brightnesses[i]) / 255)))
 
-                LED_values[x] = decay_grow_colour(dt, LED_values[x], LED_val)
+                LED_set_values[x] = LED_val
                 x += 1
 
-def update_neopixels():
-    """Calculates the fade properties for each lED sets the corresponding neopixel value"""
+def update_neopixels(dt):
+    """Calculates the decay-grow and fade properties for each lED sets the corresponding neopixel value"""
+    # Apply the decay-grow limitation first
+    for i, (col_val, col_set) in enumerate(zip(LED_values, LED_set_values)):
+        LED_values[i] = decay_grow_colour(dt, col_val, col_set)
+
     # remove the last value since we do not need a fade at the end
     for pos in LED_ranges[:-1]:
         fade_transition(pos)
@@ -280,6 +282,9 @@ if __name__ == "__main__":
                 beat = bool(tuple_data[-2])
                 brightnesses = [tuple_data[i] for i in range(N_lights)]
 
+                # update the light brightnesses based on the new data
+                set_lights(now - start, beat)
+
             elif code == init_start_code:
                 data = server.recieve_data(init_size)
                 N_lights, INCREASE_RATE, DECAY_RATE, colour_mode, end = struct.unpack(init_format, data)
@@ -303,7 +308,7 @@ if __name__ == "__main__":
             elif code == shutdown_code:
                 server.close_socket()
                 pixels.fill((0,0,0))
-                update_neopixels()
+                update_neopixels(now - last)
                 time.sleep(0.1)
                 sys.exit()
                 break
@@ -312,5 +317,4 @@ if __name__ == "__main__":
             # print("Updating LEDS")
             print(now - last_LED)
             last_LED = time.time()
-            set_lights(now - start, now - last, beat)
-            update_neopixels()
+            update_neopixels(now - last)
