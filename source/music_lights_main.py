@@ -34,6 +34,7 @@ INCREASE_RATE = 2000
 update_lights = True
 BEAT_INCREASE = 0
 BEAT_THRESH = 0.2  # beat detection threshold, see detect_beat() and detect_beat_long() in dsp.py
+BEAT_LOUDNESS = 1.5  # minimum loudness at a beat for it to be counted
 
 # loudness mode options
 loudness_levels = [0.5, 1, 3, 5, 7]
@@ -359,7 +360,7 @@ def callback(indata, frames, time, status):
         # fft contains the fourier coefficients
         # freqs is an array of the corresponding frequencies
 
-        beat = dsp.detect_beat_long(sound_amplitudes, BEAT_THRESH)  # determine if a beat exists in the music here
+        beat = dsp.detect_beat_long(sound_amplitudes, BEAT_THRESH, BEAT_LOUDNESS)  # determine if a beat exists in the music here
 
         for light_obj in lights:
             # calculate the brightness of each light instance from the sound

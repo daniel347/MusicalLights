@@ -52,15 +52,16 @@ def detect_beat(audio, change_thresh):
     else:
         return False
 
-def detect_beat_long(buffer, change_thresh):
-    """"Alternative beat detection based on finding a mnaximum over a longer timespan"""
+def detect_beat_long(buffer, change_thresh, min_vol):
+    """"Alternative beat detection based on finding a mnaximum over a longer timespan
+    Aslo supresses the many successive beats which are detected in slience"""
     RANGE = 10  # go back ten samples
     if len(buffer) > RANGE:
         RANGE = len(buffer)
 
     rms_over_range = rms(buffer[1:RANGE])
 
-    if buffer[0] >= rms_over_range * change_thresh:
+    if buffer[0] >= rms_over_range * change_thresh and buffer[0] > min_vol:
         return True
     else:
         return False
