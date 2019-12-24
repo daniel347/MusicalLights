@@ -162,7 +162,7 @@ def fade_transition(range_val):
 
     # update array for the faded section only
     for i in range(start_point, end_point):
-        LED_values[i] = tuple([int(round(comp * (i - start_point))) for comp in gradient])
+        LED_values[i] = tuple([int(round(start_col[n] + (comp * (i - start_point)))) for n, comp in enumerate(gradient)])
 
 def set_lights(t, dt, beat):
     """"Sets the colour of the lights based on the mode and the time from the start"""
@@ -256,6 +256,7 @@ if __name__ == "__main__":
 
     start = time.time()
     last = time.time()
+    last_LED = time.time()  # time of last LED update
     now = time.time()
 
     # ========MAIN LOOP========
@@ -263,8 +264,9 @@ if __name__ == "__main__":
         last = now
         now = time.time()
         
-        first_byte = server.recieve_noblock(1)
+        first_byte = server.receive_noblock(1)
         if (first_byte != -1):  
+            # print("Recieved from Client")
             # if there is data to read
             code = ord(first_byte)
             if code == data_start_code:
@@ -305,6 +307,8 @@ if __name__ == "__main__":
                 sys.exit()
                 break
 
-        if now - last > LED_UPDATE_PERIOD:
+        if now - last_LED > LED_UPDATE_PERIOD:
+            # print("Updating LEDS")
+            last_LED = time.time()
             set_lights(now - start, now - last, beat)
             update_neopixels()
