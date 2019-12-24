@@ -120,7 +120,7 @@ startup_pattern()
 MAX_CHANNEL = 255
 MIN_CHANNEL = 0
 
-LED_UPDATE_PERIOD = 0.025  # controls the rate at which the brightness of the leds is updated
+LED_UPDATE_PERIOD = 0.05  # controls the rate at which the brightness of the leds is updated
 
 
 # ==============================
@@ -304,11 +304,13 @@ if __name__ == "__main__":
                 server.close_socket()
                 pixels.fill((0,0,0))
                 update_neopixels()
+                time.sleep(0.1)
                 sys.exit()
                 break
 
-        if now - last_LED > LED_UPDATE_PERIOD:
+        if (now - last_LED) > LED_UPDATE_PERIOD:
             # print("Updating LEDS")
+            print(now - last_LED)
             last_LED = time.time()
             set_lights(now - start, now - last, beat)
             update_neopixels()
