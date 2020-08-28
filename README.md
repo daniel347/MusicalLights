@@ -36,4 +36,9 @@ Alternates between two colours (The first two colours in the colour list) with a
 
 Colour is set as the first colour in the colour list and does not change
 
+## Areas for development
+
+ - Blacklist audio port see rpi_w281x readme
+ - Work out the stupid Bluetooth issues
+ - If the LED update runs without updates to brightness it flickers - why?
 
