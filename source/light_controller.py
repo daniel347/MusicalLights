@@ -35,11 +35,14 @@ class LightController():
             if "led_array" in change:
                 self.set_all_leds(change["led_array"])
 
-            while time.time() < change["time"] + start_time:
-                pass
+            time.sleep(change["time"] + start_time - time.time())
             self.pixels.show()
 
     def set_all_leds(self, led_array):
         for i in range(self.N_LEDS):
             self.pixels[i] = led_array[i]
+
+    def shutdown(self):
+        self.set_all_leds([(0,0,0)] * self.N_LEDS)
+        self.pixels.deinit()
 
