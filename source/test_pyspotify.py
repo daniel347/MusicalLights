@@ -6,6 +6,8 @@ from spotipy.oauth2 import SpotifyOAuth
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 
+from colour_modes import Colours
+
 scope = "playlist-read-private"
 sp = spotipy.Spotify(auth_manager=SpotifyOAuth(scope=scope))
 
@@ -18,8 +20,11 @@ for playlist in playlists["items"]:
         playlist_tracks = sp.playlist_tracks(playlist["id"])
 
 for track in playlist_tracks["items"]:
+    print("{} - {}".format(track["track"]["name"], track["track"]["artists"][0]["name"]))
     analysis = sp.audio_analysis(track["track"]["id"])
-    print("Hello")
+    colours = Colours(20)
+    led_outs = colours.colour_change_on_beat([(1,0,0), (0,1,0), (0,0,1)], analysis["beats"])
+    print(led_outs)
 
 print("test")
 

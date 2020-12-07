@@ -93,22 +93,22 @@ server = bt.BluetoothServerSDP(uuid, SERVICE_NAME, TIMEOUT)
 # ========STARTUP SEQUENCE========
 
 def startup_pattern():
-    """"Light pattern to play at startup"""
-    start_pattern = [(50, 0, 0),
-                     (75, 100, 0),
-                     (0, 255, 0),
-                     (0, 100, 75),
-                     (0, 0, 50)]  # like a small spectrum wave
+""""Light pattern to play at startup"""
+start_pattern = [(50, 0, 0),
+                 (75, 100, 0),
+                 (0, 255, 0),
+                 (0, 100, 75),
+                 (0, 0, 50)]  # like a small spectrum wave
 
-    speed = 0.01  # time delay between moving the wave up one pixel
+speed = 0.01  # time delay between moving the wave up one pixel
 
-    for wave_pos in range(N_LEDS - len(start_pattern)):
-        pixels.fill((0, 0, 0))
-        for i, c in enumerate(start_pattern):
-            pixels[wave_pos + i] = c
+for wave_pos in range(N_LEDS - len(start_pattern)):
+    pixels.fill((0, 0, 0))
+    for i, c in enumerate(start_pattern):
+        pixels[wave_pos + i] = c
 
-        pixels.show()
-        time.sleep(speed)
+    pixels.show()
+    time.sleep(speed)
 
 
 # =================================
