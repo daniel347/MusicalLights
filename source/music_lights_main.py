@@ -29,7 +29,7 @@ light_freq_ranges = [(50, 200), (200, 300), (300, 400), (400, 650), (650, 1000)]
 assert (len(light_freq_ranges) == N_lights)
 MAX_FOURIER = 255
 LOW_THRESH = 5
-DECAY_RATE = 350
+DECAY_RATE = 500
 INCREASE_RATE = 2000
 update_lights = True
 BEAT_INCREASE = 0
@@ -328,6 +328,9 @@ class GUI:
             l.DECAY_RATE = int(self.decay_rate.get())
             l.LOW_THRESH = int(self.low_thresh.get())
             l.INCREASE_RATE = int(self.increase_rate.get())
+
+        DECAY_RATE = int(self.decay_rate.get())
+        INCREASE_RATE = int(self.increase_rate.get())
 
         # audio parameters
         TARGET_LEVEL = self.audio_level.get()
