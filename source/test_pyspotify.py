@@ -40,7 +40,8 @@ value = sp.current_user_playing_track()
 if value is not None:
     print("Currently playing {}".format(value["item"]["name"]))
     analysis = sp.audio_analysis(value["item"]["id"])
-    led_outs = colours.colour_fade_on_beat(np.array([[255,0,0], [0,255,0], [0,0,255]]), analysis["beats"], duration_shift=0.8, interpolated_points=20)
+    print(analysis["sections"][1]["start"])
+    led_outs = colours.colour_change_increasing_frequency("GreenWhite", analysis, 1, duration_shift=0.8)
     # led_outs = colours.modulate_brightness_on_loudness(led_outs, analysis["segments"], interpolated_points=5)
 
     # call the api again for the accurate timing

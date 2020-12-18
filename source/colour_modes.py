@@ -23,27 +23,37 @@ class Colours:
             "Neon2": np.array([[111, 255, 0], [200, 0, 255], [0, 150, 255]]),
 
             "Warning": np.array([[255, 42, 0], [255, 255, 255]]),
-            "GreenWhite": np.array([[255, 128, 0], [255, 255, 255]]),
+            "GreenWhite": np.array([[128, 255, 0], [255, 255, 255]]),
             "BlueWhite": np.array([[0, 51, 255], [255, 255, 255]])
         }
 
-    def colour_change_on_beat(self, colour_list, beats, duration_shift=0):
+    def colour_change_on_beat(self, colour_list, beats, duration_shift=0.0, subdivide=1):
+        if type(colour_list) == str:
+            colour_list = self.colour_schemes[colour_list]
+
         num_colours = len(colour_list)
 
         colour_sequence = np.repeat(colour_list, self.N_LEDS, axis=0)\
             .reshape((num_colours, self.N_LEDS, 3))
 
-        num_whole_cycles = math.floor(len(beats)/num_colours)
-        remainder_beats = len(beats) % num_colours
+        num_whole_cycles = math.floor((len(beats) * subdivide)/num_colours)
+        remainder_beats = (len(beats) * subdivide) % num_colours
         full_sequence = np.concatenate([np.tile(colour_sequence, (num_whole_cycles, 1, 1)),
                                   colour_sequence[:remainder_beats, :, :]], axis=0)
 
         change_times = np.array([beat["start"] + beat["duration"] * duration_shift
                                  for beat in beats])
+        if subdivide > 1:
+            change_times = np.interp(np.arange(len(full_sequence)),
+                                     np.arange(len(beats)) * subdivide,
+                                     change_times)
 
         return LightSequence(full_sequence, change_times)
 
     def colour_fade_on_beat(self, colour_list, beats, interpolated_points=5, duration_shift=0):
+        if type(colour_list) == str:
+            colour_list = self.colour_schemes[colour_list]
+
         unfaded_sequence = self.colour_change_on_beat(colour_list, beats, duration_shift)
         change_times = unfaded_sequence.change_times
         full_sequence = unfaded_sequence.led_array
@@ -56,7 +66,10 @@ class Colours:
 
         return LightSequence(interpolated_sequence, interpolated_times)
 
-    def colour_pulse_on_beat(self, colour_list, fill_colour, beats, duration_shift=0):
+    def colour_pulse_on_beat(self, colour_list, beats, duration_shift=0, fill_colour=np.array([0,0,0])):
+        if type(colour_list) == str:
+            colour_list = self.colour_schemes[colour_list]
+
         filled_colour_list = list(colour_list)
         for i in range(len(colour_list)-1, -1, -1):
             filled_colour_list.insert(i, fill_colour)
@@ -102,6 +115,26 @@ class Colours:
                                     self.MIN_CHANNEL, self.MAX_CHANNEL)
 
         return LightSequence(modulated_led_array, interpolated_times)
+
+    def colour_change_increasing_frequency(self, colour_list, analysis, section_num, duration_shift=0.8, time_ratio=[0.33, 0.66, 1]):
+        slow_pace = self.colour_change_on_beat(colour_list, analysis["bars"], duration_shift)
+        medium_pace = self.colour_change_on_beat(colour_list, analysis["tatums"], duration_shift)
+        fast_pace = self.colour_change_on_beat(colour_list, analysis["tatums"], duration_shift, subdivide=4)
+
+        section = analysis["sections"][section_num]
+        change_times = np.array([0,
+                                section["duration"] * time_ratio[0],
+                                section["duration"] * time_ratio[1],
+                                section["duration"] * time_ratio[2]])
+        change_times += section["start"]
+
+        return LightSequence(sequence_list_time=[slow_pace, medium_pace, fast_pace],
+                            switch_times=change_times)
+
+
+
+
+
 
 
 
