@@ -11,7 +11,7 @@ class LightStripSim:
         pygame.init()
 
         # set up screen
-        self.size = (1000, 100)
+        self.size = (1000, int(1000/N_LEDS))
         self.screen = pygame.display.set_mode(self.size)
         self.screen.fill((0, 0, 0))
 
@@ -30,12 +30,13 @@ class LightStripSim:
     def play_led_output(self, light_sequence, track_pos = 0.0):
         start_time = time.time()
         for change_time, led_array in light_sequence:
-            self.draw_leds(led_array)
-
             pygame.event.get()
             time_to_next_change = change_time + start_time - track_pos - time.time()
             if time_to_next_change > 0:
                 time.sleep(time_to_next_change)
+
+            self.draw_leds(led_array)
+
 
     def close_sim(self):
         pygame.display.quit()

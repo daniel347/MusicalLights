@@ -11,8 +11,8 @@ import numpy as np
 from colour_modes import Colours
 from light_strip_sim import LightStripSim
 
-sim = LightStripSim(150)
-colours = Colours(150, 0, 255)
+sim = LightStripSim(1)
+colours = Colours(1, 0, 255)
 
 scope = "playlist-read-private user-read-currently-playing"
 client_credentials = SpotifyClientCredentials()
@@ -21,8 +21,6 @@ sp = spotipy.Spotify(auth_manager=SpotifyOAuth(scope=scope))
 playlist_name = "Christmas Songs"
 playlist_tracks = ""
 playlists = sp.current_user_playlists()
-
-led_outs_dict = {}
 
 """
 for playlist in playlists["items"]:
@@ -39,15 +37,18 @@ for track in playlist_tracks["items"]:
     
 """
 value = sp.current_user_playing_track()
-print("Currently playing")
-analysis = sp.audio_analysis(value["item"]["id"])
-led_outs = colours.colour_fade_on_beat(np.array([[255,0,0], [255,0,0], [255,0,0]]), analysis["beats"], duration_shift=0.8)
-led_outs = colours.modulate_brightness_on_loudness(led_outs, analysis["segments"], interpolated_points=5, blur_samples=1)
+if value is not None:
+    print("Currently playing {}".format(value["item"]["name"]))
+    analysis = sp.audio_analysis(value["item"]["id"])
+    led_outs = colours.colour_fade_on_beat(np.array([[255,0,0], [0,255,0], [0,0,255]]), analysis["beats"], duration_shift=0.8, interpolated_points=20)
+    # led_outs = colours.modulate_brightness_on_loudness(led_outs, analysis["segments"], interpolated_points=5)
 
-# call the api again for the accurate timing
-value = sp.current_user_playing_track()
-time_in = value["progress_ms"]/1000
-sim.play_led_output(led_outs, time_in)
+    # call the api again for the accurate timing
+    value = sp.current_user_playing_track()
+    time_in = value["progress_ms"]/1000
+    sim.play_led_output(led_outs, time_in)
+else:
+    print("Nothing playing at the moment")
 
 """
 

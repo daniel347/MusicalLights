@@ -1,6 +1,7 @@
 import neopixel
 import board
 import time
+import RPi.GPIO as GPIO
 
 class LightController():
 
@@ -29,7 +30,7 @@ class LightController():
     def play_led_output(self, light_sequence, track_pos=0.0):
         start_time = time.time()
         for change_time, led_array in light_sequence:
-            self.set_all_leds(led_array)
+            self.__set_all_leds(led_array)
 
             time_to_next_change = change_time + start_time - track_pos - time.time()
             if time_to_next_change < 0:
@@ -39,18 +40,62 @@ class LightController():
             time.sleep(time_to_next_change)
             self.pixels.show()
 
-    def set_all_leds(self, led_array):
+    def __set_all_leds(self, led_array):
         for i in range(self.N_LEDS):
             self.pixels[i] = led_array[i]
 
     def shutdown(self):
-        self.set_all_leds([(0, 0, 0)] * self.N_LEDS)
+        self.__set_all_leds([(0, 0, 0)] * self.N_LEDS)
         self.pixels.deinit()
 
 
-class PwmLedController():
+class PwmLedController:
 
-    def __init__(self, red_pin=0, green_pin=0, blue_pin=0):
-        self.red_pin = red_pin
-        self.GreenPin = pins
+    def __init__(self, red_pin=0, green_pin=0, blue_pin=0, pwm_freq=200):
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(red_pin, GPIO.OUT)
+        GPIO.setup(green_pin, GPIO.OUT)
+        GPIO.setup(blue_pin, GPIO.OUT)
+
+        self.red_pwm = GPIO.PWM(red_pin, pwm_freq)
+        self.green_pwm = GPIO.PWM(green_pin, pwm_freq)
+        self.blue_pwm = GPIO.PWM(blue_pin, pwm_freq)
+
+        self.red_pwm.start(0)
+        self.green_pwm.start(0)
+        self.blue_pwm.start(0)
+
+        self.MAX_CHANNEL = 100.0
+        self.MIN_CHANNEL = 0.0
+
+    def startup_pattern(self):
+        """Light pattern no play at startup"""
+        pass
+
+    def play_led_output(self, light_sequence, track_pos=0.0):
+        start_time = time.time()
+        for change_time, led_array in light_sequence:
+            colour = self.__uint8_to_percentage(led_array)[0]
+
+            time_to_next_change = change_time + start_time - track_pos - time.time()
+            if time_to_next_change < 0:
+                continue # If we are too late, skip to the next cycle
+                # without sleeping or displaying
+
+            time.sleep(time_to_next_change)
+            self.__set_all_leds(colour)
+
+    def __uint8_to_percentage(self, led_array):
+        return led_array.astype(float) * (100 / 255)
+
+    def __set_all_leds(self, colour):
+        self.red_pwm.ChangeDutyCycle(colour[0])
+        self.green_pwm.ChangeDutyCycle(colour[1])
+        self.blue_pwm.ChangeDutyCycle(colour[2])
+
+    def shutdown(self):
+        self.red_pwm.stop()
+        self.green_pwm.stop()
+        self.blue_pwm.stop()
+        GPIO.cleanup()
 
