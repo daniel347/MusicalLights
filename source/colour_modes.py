@@ -10,6 +10,23 @@ class Colours:
         self.MAX_CHANNEL = MAX_CHANNEL
         self.MIN_CHANNEL = MIN_CHANNEL
 
+        self.colour_schemes = \
+        {
+            "Rave": np.array([[255, 0, 0], [0, 255, 0], [0, 255, 255], [255, 0, 255], [0, 0, 255], [255, 255, 0]]),
+
+            "Pastel1": np.array([[118, 227, 185], [252, 255, 74], [217, 78, 78], [225, 154, 245], [116, 190, 232]]),
+
+            "Pastel2": np.array([[116, 232, 90], [255, 182, 143], [98, 94, 214], [52, 55, 194]]),
+            "Neon1": np.array([[0, 255, 255], [250, 255, 0], [255, 100, 0], [255, 0, 255]]),
+
+            "RedGreenBlue": np.array([[255, 42, 0], [0, 255, 128], [0, 51, 255]]),
+            "Neon2": np.array([[111, 255, 0], [200, 0, 255], [0, 150, 255]]),
+
+            "Warning": np.array([[255, 42, 0], [255, 255, 255]]),
+            "GreenWhite": np.array([[255, 128, 0], [255, 255, 255]]),
+            "BlueWhite": np.array([[0, 51, 255], [255, 255, 255]])
+        }
+
     def colour_change_on_beat(self, colour_list, beats, duration_shift=0):
         num_colours = len(colour_list)
 
