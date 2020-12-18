@@ -13,10 +13,7 @@ class LightController():
 
     def startup_pattern(self):
         """"Light pattern to play at startup"""
-        start_pattern = [(50, 0, 0),
-                         (75, 100, 0),
-                         (0, 255, 0),
-                         (0, 100, 75),
+        start_pattern = [(50, 0, 0), (75, 100, 0), (0, 255, 0), (0, 100, 75),
                          (0, 0, 50)]  # like a small spectrum wave
 
         speed = 0.01  # time delay between moving the wave up one pixel
@@ -29,13 +26,17 @@ class LightController():
             self.pixels.show()
             time.sleep(speed)
 
-    def play_led_output(self, led_out):
+    def play_led_output(self, light_sequence, track_pos=0.0):
         start_time = time.time()
-        for change in led_out:
-            if "led_array" in change:
-                self.set_all_leds(change["led_array"])
+        for change_time, led_array in light_sequence:
+            self.set_all_leds(led_array)
 
-            time.sleep(change["time"] + start_time - time.time())
+            time_to_next_change = change_time + start_time - track_pos - time.time()
+            if time_to_next_change < 0:
+                continue # If we are too late, skip to the next cycle
+                # without sleeping or displaying
+
+            time.sleep(time_to_next_change)
             self.pixels.show()
 
     def set_all_leds(self, led_array):
@@ -43,6 +44,13 @@ class LightController():
             self.pixels[i] = led_array[i]
 
     def shutdown(self):
-        self.set_all_leds([(0,0,0)] * self.N_LEDS)
+        self.set_all_leds([(0, 0, 0)] * self.N_LEDS)
         self.pixels.deinit()
+
+
+class PwmLedController():
+
+    def __init__(self, red_pin=0, green_pin=0, blue_pin=0):
+        self.red_pin = red_pin
+        self.GreenPin = pins
 
