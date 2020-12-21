@@ -10,20 +10,15 @@ class MoodBasedColours():
         if features["key"] != -1:
             key = Key(features["key"])
 
-        major = bool(section["mode"]) if section["mode"] != -1 else None
-        time_signature = features["time_signature"] > self.thresholds["danceability"]
+        major = bool(features["mode"]) if features["mode"] != -1 else None
+        time_signature = features["time_signature"]
         danceable = features["danceability"] > self.thresholds["danceability"]
         energetic = features["energy"] > self.thresholds["energy"]
         high_valence = features["valence"] > self.thresholds["valence"]
-        tempo = features["tempo"] > self.thresholds["tempo"]
+        tempo = features["tempo"]
 
-    def choose_modes_from_sections(self, anaysis):
-        for section in anaysis["sections"]:
-            key = None
-            if section["key"] != -1:
-                key = Key(section["key"])
-
-            major = bool(section["mode"]) if section["mode"] != -1 else None
+        return AudioFeatures(key, major, time_signature, danceable,
+                             energetic, high_valence, tempo)
 
 
 class AudioFeatures:

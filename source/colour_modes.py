@@ -27,7 +27,13 @@ class Colours:
             "BlueWhite": np.array([[0, 51, 255], [255, 255, 255]])
         }
 
+        self.colour_functions = ["colour_change_on_beat",
+                                 "colour_fade_on_beat",
+                                 "colour_pulse_on_beat"]
+                                 # "colour_change_increasing_frequency"]
+
     def colour_change_on_beat(self, colour_list, beats, duration_shift=0.0, subdivide=1):
+        """Best with clear defined beats/bars and faster tempo"""
         if type(colour_list) == str:
             colour_list = self.colour_schemes[colour_list]
 
@@ -50,7 +56,8 @@ class Colours:
 
         return LightSequence(full_sequence, change_times)
 
-    def colour_fade_on_beat(self, colour_list, beats, interpolated_points=5, duration_shift=0):
+    def colour_fade_on_beat(self, colour_list, beats, interpolated_points=20, duration_shift=0):
+        """Best with slow to medium tempos and less defined beats"""
         if type(colour_list) == str:
             colour_list = self.colour_schemes[colour_list]
 
@@ -67,6 +74,7 @@ class Colours:
         return LightSequence(interpolated_sequence, interpolated_times)
 
     def colour_pulse_on_beat(self, colour_list, beats, duration_shift=0, fill_colour=np.array([0,0,0])):
+        """Best with a sharp emphasis on beats/bars and fast tempo"""
         if type(colour_list) == str:
             colour_list = self.colour_schemes[colour_list]
 
@@ -95,7 +103,8 @@ class Colours:
 
         return LightSequence(full_sequence, change_times)
 
-    def modulate_brightness_on_loudness(self, light_sequence, segments, interpolated_points=5, duration_offset=0):
+    def modulate_brightness_on_loudness(self, light_sequence, segments, interpolated_points=20, duration_offset=0):
+        """Best used with a single colour for regions with large loudness variations/silent periods"""
         loudness_times = np.array([segment["start"] + segment["duration"] * duration_offset
                                    for segment in segments])
         loudness_values = np.array([segment["loudness_max"] for segment in segments])
@@ -117,6 +126,7 @@ class Colours:
         return LightSequence(modulated_led_array, interpolated_times)
 
     def colour_change_increasing_frequency(self, colour_list, analysis, section_num, duration_shift=0.8, time_ratio=[0.33, 0.66, 1]):
+        """Rave-like a useful buildup for somewhat fast paced songs or before bass drops"""
         slow_pace = self.colour_change_on_beat(colour_list, analysis["bars"], duration_shift)
         medium_pace = self.colour_change_on_beat(colour_list, analysis["tatums"], duration_shift)
         fast_pace = self.colour_change_on_beat(colour_list, analysis["tatums"], duration_shift, subdivide=4)
@@ -130,6 +140,16 @@ class Colours:
 
         return LightSequence(sequence_list_time=[slow_pace, medium_pace, fast_pace],
                             switch_times=change_times)
+
+    def choose_colour_schemes_for_time_signature(self, time_signature):
+        possible_colours = []
+        for arr in self.colour_schemes.values():
+            if len(arr) % time_signature == 0 or time_signature % len(arr) == 0:
+                possible_colours.append(arr)
+
+        return possible_colours
+
+
 
 
 

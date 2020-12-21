@@ -27,7 +27,7 @@ class LightSequence:
                                                          seq.change_times < switch_times[i+1])))
 
         self.change_times = np.concatenate([seq.change_times[idxs] for seq, idxs in zip(sequence_list, valid_indexes)])
-        assert np.all(np.diff(self.change_times) > 0)  # check all the times are increasing
+        # assert np.all(np.diff(self.change_times) > 0)  # check all the times are increasing
 
         self.led_array = np.concatenate([seq.led_array[idxs] for seq, idxs in zip(sequence_list, valid_indexes)], axis=0)
 
