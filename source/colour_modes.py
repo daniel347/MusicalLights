@@ -30,7 +30,9 @@ class Colours:
         self.colour_functions = ["colour_change_on_beat",
                                  "colour_fade_on_beat",
                                  "colour_pulse_on_beat"]
-                                 # "colour_change_increasing_frequency"]
+        # All these have the same interface
+
+        self.colour_sub_sequences = ["colour_change_increasing_frequency"]
 
     def colour_change_on_beat(self, colour_list, beats, duration_shift=0.0, subdivide=1):
         """Best with clear defined beats/bars and faster tempo"""

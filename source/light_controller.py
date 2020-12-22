@@ -2,6 +2,8 @@ import neopixel
 import board
 import time
 import RPi.GPIO as GPIO
+import numpy as np
+from scipy.interpolate import interp1d
 
 class LightController():
 
@@ -51,7 +53,7 @@ class LightController():
 
 class PwmLedController:
 
-    def __init__(self, red_pin=0, green_pin=0, blue_pin=0, pwm_freq=200):
+    def __init__(self, red_pin=13, green_pin=19, blue_pin=26, pwm_freq=200):
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(red_pin, GPIO.OUT)
         GPIO.setup(green_pin, GPIO.OUT)
@@ -69,8 +71,15 @@ class PwmLedController:
         self.MIN_CHANNEL = 0.0
 
     def startup_pattern(self):
-        """Light pattern no play at startup"""
-        pass
+        """Light pattern to play at startup"""
+        colours = np.array([[0,0,0], [255, 0, 0], [0, 255, 0], [0,0,255], [0,0,0]])
+        interpolation_func = interp1d(np.arange(len(colours)) * 10, colours, axis=0)
+        interpolated_colours = interpolation_func(np.arange(len(colours) * 20))
+
+        time_delay = 0.05
+        for colour in interpolated_colours:
+            self.__set_all_leds(colour)
+            time.sleep(time_delay)
 
     def play_led_output(self, light_sequence, track_pos=0.0):
         start_time = time.time()
