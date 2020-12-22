@@ -14,8 +14,10 @@ features_thresholds = {"danceability": 0.6,
                        "valence": 0.6}
 
 LOOP_DELAY = 5 # s
+USE_SIM = True
 
-sim = LightStripSim(1)
+if USE_SIM:
+    sim = LightStripSim(1)
 colours = Colours(1, 0, 255)
 mood_colours = MoodBasedColours(features_thresholds)
 
