@@ -11,7 +11,7 @@ class LightStripSim:
         pygame.init()
 
         # set up screen
-        self.size = (1000, int(1000/N_LEDS))
+        self.size = (500, int(500/N_LEDS))
         self.screen = pygame.display.set_mode(self.size)
         self.screen.fill((0, 0, 0))
 
@@ -38,6 +38,6 @@ class LightStripSim:
             self.draw_leds(led_array)
 
 
-    def close_sim(self):
+    def shutdown(self):
         pygame.display.quit()
         pygame.quit()

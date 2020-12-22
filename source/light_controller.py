@@ -54,7 +54,6 @@ class LightController():
 class PwmLedController:
 
     def __init__(self, red_pin=13, green_pin=19, blue_pin=26, pwm_freq=200):
-        GPIO.setmode(GPIO.BCM)
         GPIO.setup(red_pin, GPIO.OUT)
         GPIO.setup(green_pin, GPIO.OUT)
         GPIO.setup(blue_pin, GPIO.OUT)

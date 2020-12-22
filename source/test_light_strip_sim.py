@@ -14,3 +14,4 @@ led_out.led_array = np.array([[[0,0,0]]*150,
 led_out.change_times = np.array([0, 0.5, 1, 1.5, 2])
 
 sim.play_led_output(led_out, track_pos=0)
+sim.shutdown()

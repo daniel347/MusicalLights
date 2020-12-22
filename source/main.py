@@ -2,20 +2,31 @@ import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 from spotipy import SpotifyClientCredentials
 import time
+import RPi.GPIO as GPIO
+import os
 
 from colour_modes import Colours
 from light_strip_sim import LightStripSim
 from light_controller import PwmLedController, LightController
 from mood_based_colours import MoodBasedColours, Key
+from export_credentials import export_credentials
+
+export_credentials()  # Exports spotify id, secret and redirect url to environment variables
 
 features_thresholds = {"danceability": 0.6,
                        "energy": 0.5,
                        "valence": 0.6}
 
 LOOP_DELAY = 5 # s
-USE_SIM = False
-PWM_LED = True
+USE_SIM = True
+PWM_LED = False
 NUM_LEDS = 1
+
+SHUTDOWN_ON_STOP = False
+STOP_PIN = 16
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(STOP_PIN, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+print(GPIO.input(STOP_PIN)) 
 
 if USE_SIM:
     controller = LightStripSim(NUM_LEDS)
@@ -30,7 +41,7 @@ scope = "playlist-read-private user-read-currently-playing"
 client_credentials = SpotifyClientCredentials()
 sp = spotipy.Spotify(auth_manager=SpotifyOAuth(scope=scope))
 
-while True:
+while GPIO.input(STOP_PIN) == 0:
     last_run = time.time()
     current_track = sp.current_user_playing_track()
 
@@ -56,3 +67,7 @@ while True:
     time_from_last_run = time.time() - last_run
     if time_from_last_run < LOOP_DELAY:
         time.sleep(LOOP_DELAY - time_from_last_run)
+        
+controller.shutdown()
+if SHUTDOWN_ON_STOP:
+    os.system("sudo shutdown -h now")
