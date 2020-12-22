@@ -74,7 +74,8 @@ class PwmLedController:
         """Light pattern to play at startup"""
         colours = np.array([[0,0,0], [255, 0, 0], [0, 255, 0], [0,0,255], [0,0,0]])
         interpolation_func = interp1d(np.arange(len(colours)) * 10, colours, axis=0)
-        interpolated_colours = interpolation_func(np.arange(len(colours) * 20))
+        interpolated_colours = interpolation_func(np.arange((len(colours) - 1) * 10 + 1))
+        interpolated_colours = self.__uint8_to_percentage(interpolated_colours)
 
         time_delay = 0.05
         for colour in interpolated_colours:
