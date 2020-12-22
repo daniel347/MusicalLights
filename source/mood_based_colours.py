@@ -2,6 +2,7 @@ from enum import Enum
 import random
 from light_sequence import LightSequence
 
+
 class MoodBasedColours():
 
     def __init__(self, thresholds):
