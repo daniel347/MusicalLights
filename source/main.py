@@ -42,9 +42,11 @@ if USE_SIM:
 elif PWM_LED:
     from light_controller import PwmLedController
     controller = PwmLedController()
+    controller.startup_pattern()
 else:
     from light_controller import LightController
     controller = LightController()
+    controller.startup_pattern()
 
 colours = Colours(NUM_LEDS, 0, 255)
 mood_colours = MoodBasedColours(features_thresholds)
