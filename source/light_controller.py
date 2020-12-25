@@ -13,7 +13,7 @@ class LightController():
 
         self.MAX_CHANNEL = 255
         self.MIN_CHANNEL = 0
-
+        
     def startup_pattern(self):
         """"Light pattern to play at startup"""
         start_pattern = [(50, 0, 0), (75, 100, 0), (0, 255, 0), (0, 100, 75),
@@ -81,7 +81,7 @@ class PwmLedController:
             self.__set_all_leds(colour)
             time.sleep(time_delay)
 
-    def play_led_output(self, light_sequence, track_pos=0.0):
+    def play_led_output(self, light_sequence, track_pos=0.0, break_function=None):
         start_time = time.time()
         for change_time, led_array in light_sequence:
             colour = self.__uint8_to_percentage(led_array)[0]
@@ -93,9 +93,15 @@ class PwmLedController:
 
             time.sleep(time_to_next_change)
             self.__set_all_leds(colour)
+            
+            if break_function:
+                if break_function():
+                    return -1
+                    
+        return 0
 
     def __uint8_to_percentage(self, led_array):
-        return led_array.astype(float) * (100 / 255)
+        return np.clip(led_array.astype(float) * (100 / 255), 0.0, 100.0)
 
     def __set_all_leds(self, colour):
         self.red_pwm.ChangeDutyCycle(colour[0])
