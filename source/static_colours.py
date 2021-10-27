@@ -7,7 +7,7 @@ import math
 LOOP_DELAY = 5 # s
 USE_SIM = True
 PWM_LED = False
-NUM_LEDS = 1
+NUM_LEDS = 14
 
 SHUTDOWN_ON_STOP = False
 STOP_PIN = 16
@@ -40,6 +40,6 @@ colour_scheme = "Neon1"
 
 while True:
     beats = make_fake_beat(5, 2.5, 60)
-    led_outs = colours.colour_fade_on_beat(colour_scheme, beats, interpolated_points=200)
+    led_outs = colours.colour_pulse_on_beat(colour_scheme, beats)
 
     controller.play_led_output(led_outs)

@@ -1,14 +1,16 @@
 import neopixel
 import board
 import time
+import math
 import RPi.GPIO as GPIO
 import numpy as np
 from scipy.interpolate import interp1d
 
 class LightController():
 
-    def __init__(self, N_LEDS):
+    def __init__(self, N_LEDS, LEDS_PER_COLOUR):
         self.N_LEDS = N_LEDS
+        self.LEDS_PER_COLOUR = LEDS_PER_COLOUR
         self.pixels = neopixel.NeoPixel(board.D18, N_LEDS, auto_write=False)
 
         self.MAX_CHANNEL = 255
@@ -44,10 +46,11 @@ class LightController():
 
     def __set_all_leds(self, led_array):
         for i in range(self.N_LEDS):
-            self.pixels[i] = led_array[i]
+            led_segment = math.floor(i/self.LEDS_PER_COLOUR)
+            self.pixels[i] = led_array[led_segment]
 
     def shutdown(self):
-        self.__set_all_leds([(0, 0, 0)] * self.N_LEDS)
+        self.__set_all_leds([(0, 0, 0)] * self.N_LEDS/self.LEDS_PER_COLOUR)
         self.pixels.deinit()
 
 

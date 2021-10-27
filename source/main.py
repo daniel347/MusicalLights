@@ -15,7 +15,8 @@ features_thresholds = {"danceability": 0.6,
 LOOP_DELAY = 5 # s
 USE_SIM = False
 PWM_LED = True
-NUM_LEDS = 1
+NUM_LEDS = 144
+LEDS_PER_COLOUR = 144
 
 USE_GPIO = True
 SHUTDOWN_ON_STOP = True
@@ -48,7 +49,7 @@ else:
     controller = LightController()
     controller.startup_pattern()
 
-colours = Colours(NUM_LEDS, 0, 255)
+colours = Colours(NUM_LEDS/LEDS_PER_COLOUR, 0, 255)
 mood_colours = MoodBasedColours(features_thresholds)
 
 scope = "playlist-read-private user-read-currently-playing"
