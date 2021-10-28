@@ -3,8 +3,9 @@ import time
 
 class LightStripSim:
 
-    def __init__(self, N_LEDS):
+    def __init__(self, N_LEDS, COLOURS_PER_LED):
         self.N_LEDS = N_LEDS
+        self.COLOURS_PER_LED = COLOURS_PER_LED
         self.MAX_CHANNEL = 255
         self.MIN_CHANNEL = 0
 
@@ -22,7 +23,8 @@ class LightStripSim:
         self.circle_radius = int(self.size[0] / (2 * self.N_LEDS))
 
     def draw_leds(self, led_array):
-        for pos, colour in zip(self.circle_pos, led_array):
+        led_array_repeated = np.repeat(self.COLOURS_PER_LED, axis=0)
+        for pos, colour in zip(self.circle_pos, led_array_repeated):
             pygame.draw.circle(self.screen, colour, (pos, self.circle_height), self.circle_radius)
 
         pygame.display.update()

@@ -46,10 +46,10 @@ elif PWM_LED:
     controller.startup_pattern()
 else:
     from light_controller import LightController
-    controller = LightController()
+    controller = LightController(NUM_LEDS, LEDS_PER_COLOUR)
     controller.startup_pattern()
 
-colours = Colours(NUM_LEDS/LEDS_PER_COLOUR, 0, 255)
+colours = Colours(int(NUM_LEDS/LEDS_PER_COLOUR), 0, 255)
 mood_colours = MoodBasedColours(features_thresholds)
 
 scope = "playlist-read-private user-read-currently-playing"
