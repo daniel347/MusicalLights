@@ -3,7 +3,7 @@ from light_sequence import LightSequence
 
 import numpy as np
 
-sim = LightStripSim(150,10)
+sim = LightStripSim(20,10)
 led_out = LightSequence()
 led_out.led_array = np.array([[[0,0,0]]*15,
                               [[255,0,0]]*15,

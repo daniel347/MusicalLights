@@ -1,5 +1,6 @@
 import pygame
 import time
+import numpy as np
 
 class LightStripSim:
 
@@ -23,7 +24,7 @@ class LightStripSim:
         self.circle_radius = int(self.size[0] / (2 * self.N_LEDS))
 
     def draw_leds(self, led_array):
-        led_array_repeated = np.repeat(self.COLOURS_PER_LED, axis=0)
+        led_array_repeated = np.repeat(led_array, self.COLOURS_PER_LED, axis=0)
         for pos, colour in zip(self.circle_pos, led_array_repeated):
             pygame.draw.circle(self.screen, colour, (pos, self.circle_height), self.circle_radius)
 
