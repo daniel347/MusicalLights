@@ -13,7 +13,7 @@ features_thresholds = {"danceability": 0.6,
                        "valence": 0.6}
 
 USE_SIM = False
-PWM_LED = True
+PWM_LED = False
 NUM_LEDS = 144
 LEDS_PER_COLOUR = 144
 
@@ -55,7 +55,8 @@ sp = spotipy.Spotify(auth_manager=SpotifyOAuth(scope=scope))
 
 if START_SERVER:
     from TCPServer import TCPServer
-    server = TCPServer(1234)
+    server = TCPServer(1237)
+    print("Listening for client")
     server.listen_for_client()
 
 # Loop variables
@@ -107,25 +108,26 @@ while True:
             # Final change reached, end the sequence
             controller.end_playing_sequence()
             playing_sequence = False
+            
+    if (START_SERVER):
+        data = server.receive(SERVER_MESSAGE_SIZE)
+        if (data is not None and len(data) == SERVER_MESSAGE_SIZE):
+            if data[0] == 0x00:
+                # stop playing
+                stop_lights = True
+                controller.end_playing_sequence()
+                controller.turn_off_leds()
+                playing_sequence = False
+                current_track = None
 
-    data = server.receive(SERVER_MESSAGE_SIZE)
-    if (len(data) == SERVER_MESSAGE_SIZE):
-        if data[0] == 0x00:
-            # stop playing
-            stop_lights = True
-            controller.end_playing_sequence()
-            controller.turn_off_leds()
-            playing_sequence = False
-            current_track = None
+            if data[0] == 0x01:
+                # resume playing
+                stop_lights = False
 
-        if data[0] == 0x01:
-            # resume playing
-            stop_lights = False
-
-        if data[0] == 0xff:
-            # shutdown
-            controller.shutdown()
-            break
+            if data[0] == 0xff:
+                # shutdown
+                controller.shutdown()
+                break
 
 print("Shutdown")
 

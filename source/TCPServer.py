@@ -5,14 +5,14 @@ class TCPServer:
 
     def __init__(self, port, timeout=0.0):
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.ip = socket.gethostbyname(socket.gethostname())
+        self.ip = socket.gethostbyname("192.168.150.236")
         self.port = port
         self.timeout = timeout
         self.is_bound = False
 
         try:
             self.server.bind((self.ip, port))
-            self.is_bound = False
+            self.is_bound = True
         except (socket.error, socket.herror) as e:
             print("Error binding socket to given port and address")
             self.is_bound = False
@@ -37,9 +37,13 @@ class TCPServer:
         self.client.settimeout(self.timeout)
 
     def receive(self, recv_size):
+        try:
+            data = self.client.recv(recv_size)
+            return data
+        except BlockingIOError:
+            print("could not read")
+            return
 
-        data = self.client.recv(recv_size)
-        return data
 
     def send(self, send_data):
 

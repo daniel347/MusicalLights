@@ -27,7 +27,7 @@ class LightController():
         start_pattern = [(50, 0, 0), (75, 100, 0), (0, 255, 0), (0, 100, 75),
                          (0, 0, 50)]  # like a small spectrum wave
 
-        speed = 0.01  # time delay between moving the wave up one pixel
+        speed = 0.0025  # time delay between moving the wave up one pixel
 
         for wave_pos in range(self.N_LEDS - len(start_pattern)):
             self.pixels.fill((0, 0, 0))
@@ -39,7 +39,11 @@ class LightController():
 
     def start_playing_sequence(self, light_sequence, track_pos = 0.0):
         self.song_start_time = time.time() - track_pos
+          # take the first change time after the start pos
         self.sequence_index = 0
+        while light_sequence.change_times[self.sequence_index] < track_pos:
+            self.sequence_index += 1
+            
         self.sequence_playing = light_sequence
         self.max_sequence_index = len(light_sequence.change_times)
 
