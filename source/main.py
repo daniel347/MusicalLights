@@ -12,31 +12,22 @@ features_thresholds = {"danceability": 0.6,
                        "energy": 0.5,
                        "valence": 0.6}
 
-LOOP_DELAY = 5 # s
 USE_SIM = False
 PWM_LED = True
 NUM_LEDS = 144
 LEDS_PER_COLOUR = 144
 
-USE_GPIO = True
-SHUTDOWN_ON_STOP = True
-STOP_PIN = 21
-
 MAX_BRIGHTNESS = 1  # reduce this for a more subtle display
 
 EXPORT_CREDENTIALS = True
 
-if EXPORT_CREDENTIALS:
-    from export_credentials import export_credentials
-    export_credentials()  # Exports spotify id, secret and redirect url to environment variables
+START_SERVER = True  # Start a server for control over wifi
+SERVER_MESSAGE_SIZE = 1
+server_messages = {0xff : "quit",
+                   0x00 : "stop_playing",
+                   0x01 : "start_playing"}
 
-gpio_break = None
-if USE_GPIO:
-    import RPi.GPIO as GPIO
-    GPIO.setmode(GPIO.BCM)
-    GPIO.setup(STOP_PIN, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-    gpio_break = lambda : GPIO.input(STOP_PIN) == 1
-
+# Select a lighting controller
 if USE_SIM:
     from light_strip_sim import LightStripSim
     controller = LightStripSim(NUM_LEDS)
@@ -49,51 +40,92 @@ else:
     controller = LightController(NUM_LEDS, LEDS_PER_COLOUR)
     controller.startup_pattern()
 
+# Create colours and mood objects
 colours = Colours(int(NUM_LEDS/LEDS_PER_COLOUR), 0, 255)
 mood_colours = MoodBasedColours(features_thresholds)
+
+# Connect to the spotify API
+if EXPORT_CREDENTIALS:
+    from export_credentials import export_credentials
+    export_credentials()  # Exports spotify id, secret and redirect url to environment variables
 
 scope = "playlist-read-private user-read-currently-playing"
 client_credentials = SpotifyClientCredentials()
 sp = spotipy.Spotify(auth_manager=SpotifyOAuth(scope=scope))
 
+if START_SERVER:
+    from TCPServer import TCPServer
+    server = TCPServer(1234)
+    server.listen_for_client()
+
+# Loop variables
+SPOTIFY_API_DELAY = 5 # s
+last_api_call = 0
+
+current_track = None
+playing_sequence = False
+
+stop_lights = False
+
 while True:
 
-    last_run = time.time()
-    current_track = sp.current_user_playing_track()
-    ret = 0
+    time_from_last_api_call = time.time() - last_api_call
+    if time_from_last_api_call > SPOTIFY_API_DELAY and not playing_sequence and not stop_lights:
+        last_api_call = time.time()
+        # Check if there is music to play if we arent playing anything
+        current_track = sp.current_user_playing_track()
 
-    # only play if there is more than 10s of the track
-    if current_track is not None and \
-            current_track["item"] is not None and \
-            current_track["item"]["duration_ms"] - current_track["progress_ms"] > 10000:
-        print("Currently playing {} - {}".format(current_track["item"]["name"],
-                                                 current_track["item"]["artists"][0]["name"]))
-        try:
-            analysis = sp.audio_analysis(current_track["item"]["id"])
-            features = sp.audio_features([current_track["item"]["id"]])[0]
-        except Exception as e:
-            print("Audio Analysis not accessable from Spotify API")
-            print(e)
+        if current_track is not None and current_track["item"] is not None \
+                and current_track["item"]["duration_ms"] - current_track["progress_ms"] > 10000:
+            print("Currently playing {} - {}".format(current_track["item"]["name"],
+                                                     current_track["item"]["artists"][0]["name"]))
+            try:
+                analysis = sp.audio_analysis(current_track["item"]["id"])
+                features = sp.audio_features([current_track["item"]["id"]])[0]
+            except Exception as e:
+                print("Audio Analysis not accessable from Spotify API")
+                print(e)
+            else:
+                audio_features = mood_colours.classify_music(features)
+                led_outs = mood_colours.choose_track_lighting(colours,
+                                                              audio_features,
+                                                              analysis)
+                led_outs.led_array = np.round(
+                    led_outs.led_array * MAX_BRIGHTNESS).astype(np.uint8)
+
+                # call the api again for the accurate timing
+                current_track = sp.current_user_playing_track()
+                time_in = current_track["progress_ms"] / 1000
+                controller.start_playing_sequence(led_outs, time_in)
+                playing_sequence = True
         else:
-            audio_features = mood_colours.classify_music(features)
-            led_outs = mood_colours.choose_track_lighting(colours, audio_features, analysis)
-            led_outs.led_array = np.round(led_outs.led_array * MAX_BRIGHTNESS).astype(np.uint8)
+            print("Nothing playing at the moment")
 
-            # call the api again for the accurate timing
-            current_track = sp.current_user_playing_track()
-            time_in = current_track["progress_ms"] / 1000
-            ret = controller.play_led_output(led_outs, time_in, gpio_break)
-    else:
-        print("Nothing playing at the moment")
-        
-    if ret == -1:
-        break
+    if (playing_sequence):
+        ret = controller.update_playing_sequence()
+        if ret == 2:
+            # Final change reached, end the sequence
+            controller.end_playing_sequence()
+            playing_sequence = False
 
-    # limit the speed of the loop, to not reach the limit with the spotify API
-    time_from_last_run = time.time() - last_run
-    if time_from_last_run < LOOP_DELAY:
-        time.sleep(LOOP_DELAY - time_from_last_run)
-        
-controller.shutdown()
-if SHUTDOWN_ON_STOP:
-    os.system("sudo shutdown -h now")
+    data = server.receive(SERVER_MESSAGE_SIZE)
+    if (len(data) == SERVER_MESSAGE_SIZE):
+        if data[0] == 0x00:
+            # stop playing
+            stop_lights = True
+            controller.end_playing_sequence()
+            controller.turn_off_leds()
+            playing_sequence = False
+            current_track = None
+
+        if data[0] == 0x01:
+            # resume playing
+            stop_lights = False
+
+        if data[0] == 0xff:
+            # shutdown
+            controller.shutdown()
+            break
+
+print("Shutdown")
+

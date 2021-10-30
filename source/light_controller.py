@@ -15,7 +15,13 @@ class LightController():
 
         self.MAX_CHANNEL = 255
         self.MIN_CHANNEL = 0
-        
+
+        # variables to handle playing a song
+        self.song_start_time = 0.0
+        self.sequence_playing = None
+        self.sequence_index = 0
+        self.max_sequence_index = 0
+
     def startup_pattern(self):
         """"Light pattern to play at startup"""
         start_pattern = [(50, 0, 0), (75, 100, 0), (0, 255, 0), (0, 100, 75),
@@ -31,26 +37,49 @@ class LightController():
             self.pixels.show()
             time.sleep(speed)
 
-    def play_led_output(self, light_sequence, track_pos=0.0):
-        start_time = time.time()
-        for change_time, led_array in light_sequence:
+    def start_playing_sequence(self, light_sequence, track_pos = 0.0):
+        self.song_start_time = time.time() - track_pos
+        self.sequence_index = 0
+        self.sequence_playing = light_sequence
+        self.max_sequence_index = len(light_sequence.change_times)
+
+    def update_playing_sequence(self):
+        # TODO: this isnt very pretty
+        change_time = self.sequence_playing.change_times[self.sequence_index]
+        time_to_next_change = change_time + self.song_start_time - time.time()
+
+        if time_to_next_change < 0:
+            led_array = self.sequence_playing.led_array[self.sequence_index]
             self.__set_all_leds(led_array)
-
-            time_to_next_change = change_time + start_time - track_pos - time.time()
-            if time_to_next_change < 0:
-                continue # If we are too late, skip to the next cycle
-                # without sleeping or displaying
-
-            time.sleep(time_to_next_change)
             self.pixels.show()
+
+            self.sequence_index += 1
+            if self.sequence_index >= self.max_sequence_index:
+                # We have reached the end
+                return 2
+            return 1
+        return 0
+
+    def end_playing_sequence(self):
+        self.song_start_time = 0
+        self.sequence_index = 0
+        self.sequence_playing = None
+        self.max_sequence_index = 0
+
+    def is_playing_sequence(self):
+        return self.sequence_playing is not None
 
     def __set_all_leds(self, led_array):
         for i in range(self.N_LEDS):
             led_segment = math.floor(i/self.LEDS_PER_COLOUR)
             self.pixels[i] = led_array[led_segment]
 
-    def shutdown(self):
+    def turn_off_leds(self):
         self.__set_all_leds([(0, 0, 0)] * self.N_LEDS/self.LEDS_PER_COLOUR)
+        self.pixels.show()
+
+    def shutdown(self):
+        self.turn_off_leds()
         self.pixels.deinit()
 
 
