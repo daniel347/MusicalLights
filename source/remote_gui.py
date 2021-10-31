@@ -1,37 +1,83 @@
 from TCPClient import TCPClient
 import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QPushButton
+from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QMainWindow, QComboBox
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import pyqtSlot
 
-server_addr = "192.168.1.91"
-client = TCPClient(server_addr, 1234)
+class FakeHandler():
 
-leds_running = True
+    def __init__(self):
+        pass
 
-def window():
-    app = QApplication(sys.argv)
-    widget = QWidget()
+    def set_leds_active(self, active):
+        print("setting led active to : {}".format(active))
 
-    button1 = QPushButton(widget)
-    button1.setText("Start LEDS")
-    button1.move(100, 275)
-    button1.resize(400, 50)
-    button1.clicked.connect(button1_clicked)
-
-    widget.setGeometry(200, 200, 600, 600)
-    widget.setWindowTitle("PyQt5 Button Click Example")
-    widget.show()
-    sys.exit(app.exec_())
+    def set_mode(self, mode):
+        print("Setting mode to : {}".format(mode))
 
 
-def button1_clicked():
-    if leds_running:
-        client.send(0x00)
-    else:
-        client.send(0x01)
+class LedState():
 
-    leds_running = not leds_running
+    def __init__(self, leds_running, modes):
+        self.leds_running = leds_running
+        self.modes = modes
+
+        self.current_mode = modes[0]
+
+
+class Window(QMainWindow):
+
+    @pyqtSlot()
+    def toggle_leds_clicked(self):
+        if self.led_state.leds_running:
+            self.handler.set_leds_active(0)
+            self.toggle_leds.setText("Start LEDS")
+        else:
+            self.handler.set_leds_active(1)
+            self.toggle_leds.setText("Stop LEDS")
+
+        self.led_state.leds_running = not self.led_state.leds_running
+
+    def mode_change(self, i):
+        self.led_state.current_mode = self.mode_dropdown.itemText(i)
+        self.handler.set_mode(i)
+
+
+    def __init__(self, com_client, led_state):
+        super(Window, self).__init__()
+        self.handler = com_client
+        self.led_state = led_state
+
+        self.widget = QWidget()
+
+        self.mode_dropdown = QComboBox(self.widget)
+        self.mode_dropdown.addItems(self.led_state.modes)
+        self.mode_dropdown.currentIndexChanged.connect(self.mode_change)
+        self.mode_dropdown.move(200, 200)
+        self.mode_dropdown.resize(200, 50)
+
+        self.toggle_leds = QPushButton(self.widget)
+        self.toggle_leds.setText("Stop LEDS")
+        self.toggle_leds.move(100, 275)
+        self.toggle_leds.resize(400, 50)
+        self.toggle_leds.clicked.connect(self.toggle_leds_clicked)
+
+        self.widget.setGeometry(200, 200, 600, 600)
+        self.widget.setWindowTitle("PyQt5 Button Click Example")
+        self.widget.show()
+
+
 
 if __name__ == '__main__':
-    window()
+    server_addr = "192.168.150.236"
+    # client = TCPClient(server_addr, 1237)
+    client = FakeHandler()
+
+    leds_running = True
+
+    led_state = LedState(leds_running, ["Constant", "Sequence", "Music"])
+
+    app = QApplication([])
+    window = Window(client, led_state)
+    app.exec_()
+

@@ -4,6 +4,7 @@ from spotipy import SpotifyClientCredentials
 import time
 import os
 import numpy as np
+import json
 
 from colour_modes import Colours
 from mood_based_colours import MoodBasedColours, Key
@@ -22,7 +23,7 @@ MAX_BRIGHTNESS = 1  # reduce this for a more subtle display
 EXPORT_CREDENTIALS = True
 
 START_SERVER = True  # Start a server for control over wifi
-SERVER_MESSAGE_SIZE = 1
+READ_CHUNK_SIZE = 1
 server_messages = {0xff : "quit",
                    0x00 : "stop_playing",
                    0x01 : "start_playing"}
@@ -67,6 +68,7 @@ current_track = None
 playing_sequence = False
 
 stop_lights = False
+server_data = bytearray([])
 
 while True:
 
@@ -110,24 +112,24 @@ while True:
             playing_sequence = False
             
     if (START_SERVER):
-        data = server.receive(SERVER_MESSAGE_SIZE)
-        if (data is not None and len(data) == SERVER_MESSAGE_SIZE):
-            if data[0] == 0x00:
-                # stop playing
-                stop_lights = True
-                controller.end_playing_sequence()
-                controller.turn_off_leds()
-                playing_sequence = False
-                current_track = None
+        data = server.receive(READ_CHUNK_SIZE)
+        if (data is not None):
+            server_data.append(data)
+            if data == 0x00:
+                json_dict = json.loads(server_data[:-1].decode())
+                method = json_dict["method"]
 
-            if data[0] == 0x01:
-                # resume playing
-                stop_lights = False
-
-            if data[0] == 0xff:
-                # shutdown
-                controller.shutdown()
-                break
+                if method == "setLedsActive":
+                    if json_dict["value"] == 0:
+                        # stop playing
+                        stop_lights = True
+                        controller.end_playing_sequence()
+                        controller.turn_off_leds()
+                        playing_sequence = False
+                        current_track = None
+                    else:
+                        # resume playing
+                        stop_lights = False
 
 print("Shutdown")
 
