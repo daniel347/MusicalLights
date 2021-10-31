@@ -1,4 +1,5 @@
 from TCPClient import TCPClient
+from communcation_handler import ComHandler
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QMainWindow, QComboBox
 from PyQt5.QtGui import QIcon
@@ -67,17 +68,17 @@ class Window(QMainWindow):
         self.widget.show()
 
 
-
 if __name__ == '__main__':
     server_addr = "192.168.150.236"
-    # client = TCPClient(server_addr, 1237)
-    client = FakeHandler()
+    client = TCPClient(server_addr, 1237)
+    handler = ComHandler(client)
+    # client = FakeHandler()
 
     leds_running = True
 
     led_state = LedState(leds_running, ["Constant", "Sequence", "Music"])
 
     app = QApplication([])
-    window = Window(client, led_state)
+    window = Window(handler, led_state)
     app.exec_()
 

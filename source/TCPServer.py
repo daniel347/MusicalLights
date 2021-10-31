@@ -41,7 +41,6 @@ class TCPServer:
             data = self.client.recv(recv_size)
             return data
         except BlockingIOError:
-            print("could not read")
             return
 
 

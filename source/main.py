@@ -112,14 +112,17 @@ while True:
             playing_sequence = False
             
     if (START_SERVER):
-        data = server.receive(READ_CHUNK_SIZE)
+        data = server.receive(1)  # read 1 byte at a time
         if (data is not None):
-            server_data.append(data)
-            if data == 0x00:
+            print("recieved bit")
+            server_data.append(int(data[0]))
+            if data[0] == 0x00:
+                print("end of message reached")
                 json_dict = json.loads(server_data[:-1].decode())
                 method = json_dict["method"]
 
                 if method == "setLedsActive":
+                    print("setLedsActive")
                     if json_dict["value"] == 0:
                         # stop playing
                         stop_lights = True

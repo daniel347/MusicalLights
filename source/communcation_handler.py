@@ -4,7 +4,7 @@ class ComHandler():
 
     def __init__(self, socket_client):
         self.client = socket_client
-        self.end_code = 0x00  # A null
+        self.end_code = bytes(0x00)  # A null
 
     def set_leds_active(self, active):
         message = {"method" : "setLedsActive",
@@ -18,5 +18,5 @@ class ComHandler():
 
     def send_message(self, message):
         data = json.dumps(message)
-        self.client.send(data)
+        self.client.send(bytes(data, 'ascii'))
         self.client.send(self.end_code)
