@@ -4,7 +4,7 @@ class ComHandler():
 
     def __init__(self, socket_client):
         self.client = socket_client
-        self.end_code = bytes(0x00)  # A null
+        self.end_code = bytes([0x00])  # A End of Transmission symbol
 
     def set_leds_active(self, active):
         message = {"method" : "setLedsActive",
@@ -15,6 +15,13 @@ class ComHandler():
         message = {"method" : "setMode",
                    "value" : mode}
         self.send_message(message)
+
+    def set_static_colour(self, colour):
+        message = {"method" : "setMode",
+                   "value" : {"r" : colour[0],
+                              "g" : colour[1],
+                              "b" : colour[2]}
+                   }
 
     def send_message(self, message):
         data = json.dumps(message)

@@ -22,6 +22,8 @@ class LightController():
         self.sequence_index = 0
         self.max_sequence_index = 0
 
+        self.master_brightness = 1.0
+
     def startup_pattern(self):
         """"Light pattern to play at startup"""
         start_pattern = [(50, 0, 0), (75, 100, 0), (0, 255, 0), (0, 100, 75),
@@ -74,13 +76,21 @@ class LightController():
         return self.sequence_playing is not None
 
     def __set_all_leds(self, led_array):
+        scaled_led_array = np.round(led_array * self.master_brightness).astype(np.uint8)
         for i in range(self.N_LEDS):
             led_segment = math.floor(i/self.LEDS_PER_COLOUR)
-            self.pixels[i] = led_array[led_segment]
+            self.pixels[i] = scaled_led_array[led_segment]
 
     def turn_off_leds(self):
-        self.__set_all_leds([(0, 0, 0)] * self.N_LEDS/self.LEDS_PER_COLOUR)
+        self.__set_all_leds([(0, 0, 0)] * int(self.N_LEDS/self.LEDS_PER_COLOUR))
         self.pixels.show()
+
+    def set_constant_colour(self, led_array):
+        self.__set_all_leds(led_array)
+        self.pixels.show()
+
+    def set_master_brightness(self, brightness):
+        self.master_brightness = max(min(brightness, 1), 0)
 
     def shutdown(self):
         self.turn_off_leds()

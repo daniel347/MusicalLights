@@ -72,7 +72,7 @@ if __name__ == '__main__':
     server_addr = "192.168.150.236"
     client = TCPClient(server_addr, 1237)
     handler = ComHandler(client)
-    # client = FakeHandler()
+    # handler = FakeHandler()
 
     leds_running = True
 
