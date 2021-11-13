@@ -21,7 +21,7 @@ class MusicReactiveHandler():
 
         self.sp = None  # the Spotify API library object
         self.current_track = None
-        self.playing_sequence = None
+        self.playing_sequence = False
 
         self.last_api_call = 0
 
@@ -88,6 +88,10 @@ class MusicReactiveHandler():
                         print("Currently playing {} - {}".format(self.current_track["item"]["name"],
                                                                  self.current_track["item"]["artists"][0]["name"]))
 
-
+    def stop_playing(self):
+        # Final change reached, end the sequence
+        self.controller.end_playing_sequence()
+        self.playing_sequence = False
+        self.current_track = None
 
 
