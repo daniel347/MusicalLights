@@ -69,7 +69,7 @@ class Window(QMainWindow):
 
 
 if __name__ == '__main__':
-    server_addr = "192.168.150.236"
+    server_addr = "10.9.39.193"
     client = TCPClient(server_addr, 1237)
     handler = ComHandler(client)
     # handler = FakeHandler()

@@ -122,7 +122,7 @@ while not shutdown:
 
     elif lighting_mode == LightingModes.Static:
         # A simple static light set
-        controller.set_constant_colour([static_colour]*int(NUM_LEDS/LEDS_PER_COLOUR))
+        controller.set_constant_colour(colours.make_uniform_colour_array(static_colour))
 
     elif lighting_mode == LightingModes.Pattern:
         pass

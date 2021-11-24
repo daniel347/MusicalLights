@@ -151,6 +151,9 @@ class Colours:
 
         return possible_colours
 
+    def make_uniform_colour_array(self, colour):
+        return np.array([colour] * self.N_LEDS)
+
 
 
 

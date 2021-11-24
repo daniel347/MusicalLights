@@ -50,7 +50,6 @@ class LightController():
         self.max_sequence_index = len(light_sequence.change_times)
 
     def update_playing_sequence(self):
-        # TODO: this isnt very pretty
         change_time = self.sequence_playing.change_times[self.sequence_index]
         time_to_next_change = change_time + self.song_start_time - time.time()
 
@@ -82,7 +81,7 @@ class LightController():
             self.pixels[i] = scaled_led_array[led_segment]
 
     def turn_off_leds(self):
-        self.__set_all_leds([(0, 0, 0)] * int(self.N_LEDS/self.LEDS_PER_COLOUR))
+        self.__set_all_leds(np.array([(0, 0, 0)] * int(self.N_LEDS/self.LEDS_PER_COLOUR)))
         self.pixels.show()
 
     def set_constant_colour(self, led_array):
