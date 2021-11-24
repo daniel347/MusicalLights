@@ -102,8 +102,8 @@ def handle_message(json_dict):
         print("setStaticColour")
         colour_json = json_dict["value"]
         if (0 <= colour_json["r"] >= 255) \
-                    (0 <= colour_json["g"] >= 255) \
-                    (0 <= colour_json["b"] >= 255):
+                    and (0 <= colour_json["g"] >= 255) \
+                    and (0 <= colour_json["b"] >= 255):
             static_colour = (colour_json["r"], colour_json["g"], colour_json["b"])
         else:
             print("ERROR: Invalid colour provided")
