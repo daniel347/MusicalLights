@@ -9,12 +9,12 @@ import time
 
 class MusicReactiveHandler():
 
-    def __init__(self, colours, mood_colours, controller, export_credentials=True, api_delay=5):
+    def __init__(self, colours, mood_colours, controller, export_creds=True, api_delay=5):
         self.controller = controller
         self.colours = colours
         self.mood_colours = mood_colours
 
-        if export_credentials:
+        if export_creds:
             export_credentials()
 
         self.api_delay = api_delay

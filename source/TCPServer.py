@@ -5,7 +5,7 @@ class TCPServer:
 
     def __init__(self, port, timeout=0.0):
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.ip = socket.gethostbyname("192.168.150.236")
+        self.ip = "10.9.39.193" # socket.gethostbyname(socket.gethostname())
         self.port = port
         self.timeout = timeout
         self.is_bound = False
