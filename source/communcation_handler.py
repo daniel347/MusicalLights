@@ -17,11 +17,12 @@ class ComHandler():
         self.send_message(message)
 
     def set_static_colour(self, colour):
-        message = {"method" : "setMode",
+        message = {"method" : "setStaticColour",
                    "value" : {"r" : colour[0],
                               "g" : colour[1],
                               "b" : colour[2]}
                    }
+        self.send_message(message)
 
     def send_message(self, message):
         data = json.dumps(message)

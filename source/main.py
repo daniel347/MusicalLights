@@ -62,15 +62,17 @@ shutdown = False
 def read_server_bit():
     global server_data
 
-    data = server.receive(1)  # read 1 byte at a time
+    data = server.receive(1)
     while (data is not None):
-        print("recieved bit")
+        print("recieved byte {}".format(data[0]))
         server_data.append(int(data[0]))
         if data[0] == 0x00:
             print("end of message reached")
             json_dict = json.loads(server_data[:-1].decode())
             json_queue.append(json_dict)
             server_data = bytearray([])
+
+        data = server.receive(1)  # read 1 byte at a time, until there are no more messages
 
 
 def handle_message(json_dict):
