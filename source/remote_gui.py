@@ -1,10 +1,17 @@
 from TCPClient import TCPClient
 from communcation_handler import ComHandler
+from Enumerations import LightingModes
 import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QMainWindow, QComboBox, QLabel, QVBoxLayout, QHBoxLayout, QSizePolicy, QSlider
+from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QMainWindow, QComboBox, QLabel, QVBoxLayout, QHBoxLayout, QSizePolicy, QSlider, QLayout
 from PyQt5.QtGui import QIcon, QPixmap, QColor, QImage, QPainter, QBrush, QPen
-from PyQt5.QtCore import pyqtSlot, QRect, Qt, QSize
+from PyQt5.QtCore import pyqtSlot, pyqtSignal, QRect, Qt, QSize
 
+from functools import partial
+
+button_styling = "background-color: darkcyan;" \
+                 "font-family: Helvetica;" \
+                 "text-align: center;" \
+                 "border-radius: {};" \
 
 class FakeHandler():
 
@@ -30,31 +37,53 @@ class LedState():
         self.current_mode = modes[0]
 
 class NavBarWidget(QWidget):
+
+    # A signal to indicate the change of mode to other widgets
+    mode_changed = pyqtSignal(int)
+
     def __init__(self, elements):
         super(NavBarWidget, self).__init__()
 
+        self.selected_elem_index = 0
+
         self.layout = QHBoxLayout()
+        self.layout.addStretch(1)
         self.setLayout(self.layout)
 
         self.element_list = []
         self.underline_list = []
 
-        for element in elements:
+        for i, element in enumerate(elements):
             v_layout = QVBoxLayout()
-            label = QLabel(element)
-            label.setAlignment(Qt.AlignHCenter)
+            label = QPushButton(element)
+            label.clicked.connect(partial(self.click_nav_bar, new_mode=i))
+            label.setStyleSheet("background:none;border:none;margin:0;padding:0;")
+            label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+            label.setMinimumSize(QSize(200, 30))
 
             underline = QLabel()
-            underline.setMaximumSize(QSize(200, 5))
-            underline.resize(200, 5)
+            underline.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+            underline.setMinimumSize(QSize(200, 5))
             underline.setStyleSheet("background-color: black")
+            if i != self.selected_elem_index:
+                underline.setVisible(False)
 
             v_layout.addWidget(label)
             v_layout.addWidget(underline)
             self.layout.addLayout(v_layout)
+            self.layout.addStretch(1)
 
             self.element_list.append(label)
             self.underline_list.append(underline)
+
+    @pyqtSlot()
+    def click_nav_bar(self, new_mode):
+        print("Changed to mode {}".format(new_mode))
+        for underline in self.underline_list:
+            underline.setVisible(False)
+
+        self.underline_list[new_mode].setVisible(True)
+        self.mode_changed.emit(new_mode)
 
 class ControlWidget(QWidget):
     def __init__(self, handler, led_state):
@@ -101,10 +130,11 @@ class ControlWidget(QWidget):
         self.layout.addWidget(self.brightness_label)
         self.layout.addLayout(self.slider_hbox)
 
-
         self.toggle_leds = QPushButton()
-        self.toggle_leds.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Maximum)
+        self.toggle_leds.resize(500, 300)
+        self.toggle_leds.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
         self.toggle_leds.setText("Stop LEDS")
+        self.toggle_leds.setStyleSheet(button_styling.format("10px"))
         self.layout.addWidget(self.toggle_leds)
         self.toggle_leds.clicked.connect(self.toggle_leds_clicked)
 
@@ -119,6 +149,7 @@ class ControlWidget(QWidget):
 
         self.led_state.leds_running = not self.led_state.leds_running
 
+    @pyqtSlot(int)
     def mode_change(self, i):
         self.led_state.current_mode = self.mode_dropdown.itemText(i)
         self.handler.set_mode(i)
@@ -156,9 +187,9 @@ class ColourWheelWidget(QWidget):
         self.handler.set_static_colour(c_rgb)
 
 
-class ColourSelectionWidget(QWidget):
+class StaticColourSelectionWidget(QWidget):
     def __init__(self, handler, led_state, image_path):
-        super(ColourSelectionWidget, self).__init__()
+        super(StaticColourSelectionWidget, self).__init__()
 
         self.layout = QHBoxLayout()
         self.setLayout(self.layout)
@@ -176,6 +207,50 @@ class ColourSelectionWidget(QWidget):
         self.layout.addStretch(1)
 
 
+class ColourSequenceWidget(QWidget):
+
+    def __init__(self, colour_sequence):
+        super(ColourSequenceWidget, self).__init__()
+        self.layout = QHBoxLayout()
+        self.layout.setSpacing(0)
+        self.setLayout(self.layout)
+
+        for colour in colour_sequence:
+            box = QLabel()
+            box.setMaximumSize(QSize(500, 150))
+            box.setStyleSheet("background-color: rgba({}, {}, {}, 1);".format(colour[0], colour[1], colour[2]))
+            self.layout.addWidget(box)
+
+class SequenceSelectionWidget(QWidget):
+
+    def __init__(self, colour_sequences):
+        super(SequenceSelectionWidget, self).__init__()
+        self.layout = QVBoxLayout()
+        self.layout.setSpacing(20)
+        self.setLayout(self.layout)
+
+        for sequence in colour_sequences:
+            seq_widget = ColourSequenceWidget(sequence)
+            self.layout.addWidget(seq_widget)
+
+        self.layout.addStretch(1)
+
+class SpotifyWidget(QWidget):
+
+    def __init__(self):
+        super(SpotifyWidget, self).__init__()
+        self.layout = QVBoxLayout()
+        self.layout.setAlignment(Qt.AlignHCenter)
+        self.setLayout(self.layout)
+
+        spotify_logo_path = "../images/spotify_logo.png"
+        self.spotify_logo = QLabel()
+        self.spotify_logo.setPixmap(QPixmap(spotify_logo_path))
+        self.layout.addWidget(self.spotify_logo)
+
+        self.refresh_button = QPushButton("Refresh")
+        self.layout.addWidget(self.refresh_button)
+
 class Window(QMainWindow):
 
     def __init__(self, com_client, led_state):
@@ -184,23 +259,49 @@ class Window(QMainWindow):
         self.led_state = led_state
 
         self.main_widget = QWidget()
-
         self.overall_layout = QVBoxLayout()
 
-        nav_bar = NavBarWidget(["Static", "Sequence", "Spotify"])
+        nav_bar = NavBarWidget([mode.name for mode in LightingModes])
+        nav_bar.mode_changed.connect(self.on_change_mode)
         self.overall_layout.addWidget(nav_bar)
 
-        image_path = "../images/colour_wheel.png"
-        colour_sel = ColourSelectionWidget(self.handler, self.led_state, image_path)
-        self.overall_layout.addWidget(colour_sel)
+        self.mode_widgets = []
+
+        # Static mode first ie LightingModes(0)
+        colour_wheel_path = "../images/colour_wheel.png"
+        static_colour_sel = StaticColourSelectionWidget(self.handler, self.led_state, colour_wheel_path)
+        self.mode_widgets.append(static_colour_sel)
+        self.overall_layout.addWidget(static_colour_sel)
+
+        # Then the sequence mode LightingModes(1)
+        sequence_sel = SequenceSelectionWidget([[[255, 0, 0], [0, 255, 0], [0, 0, 255]], [[255, 255, 0], [0, 255, 255], [255, 0, 255]]])
+        self.mode_widgets.append(sequence_sel)
+        self.overall_layout.addWidget(sequence_sel)
+        sequence_sel.setVisible(False)
+
+        # them the spotify widget LightingModes(2)
+        spotify_wid = SpotifyWidget()
+        self.mode_widgets.append(spotify_wid)
+        self.overall_layout.addWidget(spotify_wid)
+        spotify_wid.setVisible(False)
 
         control_widget = ControlWidget(self.handler, self.led_state)
         self.overall_layout.addWidget(control_widget)
 
         self.main_widget.setLayout(self.overall_layout)
         self.main_widget.setGeometry(200, 200, 600, 600)
-        self.main_widget.setWindowTitle("Why wont this work")
+        self.main_widget.setWindowTitle("LED Strip Control")
         self.main_widget.show()
+
+    @pyqtSlot(int)
+    def on_change_mode(self, new_mode):
+        for i, widget in enumerate(self.mode_widgets):
+            if i == new_mode:
+                widget.setVisible(True)
+            else:
+                widget.setVisible(False)
+
+
 
 
 if __name__ == '__main__':
@@ -211,7 +312,7 @@ if __name__ == '__main__':
 
     leds_running = True
 
-    led_state = LedState(leds_running, ["Constant", "Sequence", "Music"])
+    led_state = LedState(leds_running, [mode.name for mode in LightingModes])
 
     app = QApplication([])
     window = Window(handler, led_state)
