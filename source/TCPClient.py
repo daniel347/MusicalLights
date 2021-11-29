@@ -24,10 +24,12 @@ class TCPClient:
 
     def receive(self, recv_size):
 
-        data = self.cleint_sock.recv(recv_size)
+        data = self.client_sock.recv(recv_size)
         return data
 
     def send(self, send_data):
 
         self.client_sock.send(send_data)
 
+    def close(self):
+        self.client_sock.close()

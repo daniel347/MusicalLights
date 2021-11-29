@@ -55,7 +55,7 @@ master_brightness = 1
 server_data = bytearray([])
 json_queue = []
 
-mode_handler = music_reactive_handler  # The handler for the particular mode you are the world
+mode_handler = music_reactive_handler  # The handler for the particular mode you are in
 
 shutdown = False
 
@@ -80,6 +80,7 @@ def read_server_bit():
 def handle_message(json_dict):
     global static_colour
     global lighting_mode
+    global shutdown
 
     method = json_dict["method"]
 
@@ -100,6 +101,10 @@ def handle_message(json_dict):
             mode_handler.stop_playing()
             lighting_mode = new_mode
 
+    elif method == "setBrightness":
+        print("setBrightness")
+        controller.set_master_brightness(json_dict["value"])
+
     elif method == "setStaticColour":
         print("setStaticColour")
         colour_json = json_dict["value"]
@@ -110,6 +115,15 @@ def handle_message(json_dict):
         else:
             print("ERROR: Invalid colour provided")
 
+    elif method == "triggerSpotifyUpdate":
+        print("triggerSpotifyUpdate")
+        # Stop playing the current song but dont turn off the output so that
+        # we re-check for a new song at the next update
+        music_reactive_handler.stop_playing()
+
+    elif method == "shutdown":
+        print("shutdown")
+        shutdown = True;
 
 while not shutdown:
 
@@ -130,9 +144,10 @@ while not shutdown:
         controller.set_constant_colour(colours.make_uniform_colour_array(static_colour))
 
     elif lighting_mode == LightingModes.Sequence:
-        pass
+        print("I am not implemented yet!")
 
 
 
+server.shutdown()
 print("Shutdown")
 

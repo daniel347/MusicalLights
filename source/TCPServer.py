@@ -45,5 +45,8 @@ class TCPServer:
 
 
     def send(self, send_data):
-
         self.client.send(send_data)
+
+    def shutdown(self):
+        self.client.close()
+        self.server.close()
