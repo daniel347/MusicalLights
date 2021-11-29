@@ -64,17 +64,16 @@ def read_server_bit():
 
     data = server.receive(1)
     while (data is not None):
-        print("recieved byte {}".format(data[0]))
+        # print("recieved byte {}".format(data[0]))
         server_data.append(int(data[0]))
         if data[0] == 0x00:
             print("end of message reached")
+            print(server_data[:-1].decode())
             json_dict = json.loads(server_data[:-1].decode())
             json_queue.append(json_dict)
             server_data = bytearray([])
         
         data = server.receive(1)  # read 1 byte at a time
-
-        data = server.receive(1)  # read 1 byte at a time, until there are no more messages
 
 
 def handle_message(json_dict):
@@ -108,9 +107,9 @@ def handle_message(json_dict):
     elif method == "setStaticColour":
         print("setStaticColour")
         colour_json = json_dict["value"]
-        if (0 <= colour_json["r"] >= 255) \
-                    and (0 <= colour_json["g"] >= 255) \
-                    and (0 <= colour_json["b"] >= 255):
+        if (0 <= colour_json["r"] <= 255) \
+                    and (0 <= colour_json["g"] <= 255) \
+                    and (0 <= colour_json["b"] <= 255):
             static_colour = (colour_json["r"], colour_json["g"], colour_json["b"])
         else:
             print("ERROR: Invalid colour provided")
