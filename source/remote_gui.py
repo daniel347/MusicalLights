@@ -413,12 +413,12 @@ class Window(QMainWindow):
 
     @pyqtSlot()
     def on_update_spotify(self):
-        self.handler.
+        self.handler.shutdown()
 
 if __name__ == '__main__':
     server_addr = "10.9.39.193"
-    # client = TCPClient(server_addr, 1237)
-    client = FakeSocketClient()
+    client = TCPClient(server_addr, 1237)
+    # client = FakeSocketClient()
     handler = ComHandler(client)
 
     leds_running = True

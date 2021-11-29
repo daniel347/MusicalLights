@@ -29,7 +29,9 @@ else:
     controller = LightController(NUM_LEDS, LEDS_PER_COLOUR)
     controller.startup_pattern()
 
-features_thresholds = {}
+features_thresholds = {"danceability": 0.6,
+                        "energy": 0.5,
+                        "valence": 0.6}
 
 # Create colours and mood objects
 colours = Colours(int(NUM_LEDS/LEDS_PER_COLOUR), 0, 255)
@@ -81,6 +83,7 @@ def handle_message(json_dict):
     global static_colour
     global lighting_mode
     global shutdown
+    global stop_lights
 
     method = json_dict["method"]
 
@@ -90,6 +93,7 @@ def handle_message(json_dict):
             stop_lights = True
             # Stop any sequence playing and turn off the lights
             mode_handler.stop_playing()
+            controller.turn_off_leds()
         else:
             # resume playing by allowing the code for a specific loop to run
             stop_lights = False
@@ -123,7 +127,7 @@ def handle_message(json_dict):
 
     elif method == "shutdown":
         print("shutdown")
-        shutdown = True;
+        shutdown = True
 
 while not shutdown:
 
@@ -147,7 +151,7 @@ while not shutdown:
         print("I am not implemented yet!")
 
 
-
+controller.turn_off_leds()
 server.shutdown()
-print("Shutdown")
+print("Shutdown complete")
 

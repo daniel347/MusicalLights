@@ -43,5 +43,6 @@ class ComHandler():
 
     def send_message(self, message):
         data = json.dumps(message)
+        print(data)
         self.client.send(bytes(data, 'ascii'))
         self.client.send(self.end_code)
