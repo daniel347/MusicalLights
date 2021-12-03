@@ -93,5 +93,6 @@ class MusicReactiveHandler():
         self.controller.end_playing_sequence()
         self.playing_sequence = False
         self.current_track = None
+        self.controller.turn_off_leds()
 
 

@@ -4,6 +4,7 @@ from Enumerations import LightingModes
 from colour_modes import Colours
 from mood_based_colours import MoodBasedColours, Key
 from music_reactive_mode_handler import MusicReactiveHandler
+from sequence_mode_handler import SequenceHandler
 
 USE_SIM = False
 PWM_LED = False
@@ -41,6 +42,8 @@ mood_colours = MoodBasedColours(features_thresholds)
 music_reactive_handler = MusicReactiveHandler(colours, mood_colours, controller,
                                               EXPORT_CREDENTIALS)
 
+sequence_handler = SequenceHandler(colours, controller, "")
+
 from TCPServer import TCPServer
 server = TCPServer(1237)
 print("Listening for client")
@@ -58,7 +61,6 @@ server_data = bytearray([])
 json_queue = []
 
 mode_handler = music_reactive_handler  # The handler for the particular mode you are in
-
 shutdown = False
 
 def read_server_bit():
@@ -128,6 +130,7 @@ def handle_message(json_dict):
         print("shutdown")
         shutdown = True
 
+
 while not shutdown:
 
     read_server_bit()
@@ -147,7 +150,7 @@ while not shutdown:
         controller.set_constant_colour(colours.make_uniform_colour_array(static_colour))
 
     elif lighting_mode == LightingModes.Sequence:
-        print("I am not implemented yet!")
+        sequence_handler.update_handler()
 
 
 controller.turn_off_leds()
