@@ -5,7 +5,7 @@ class TCPServer:
 
     def __init__(self, port, timeout=0.0):
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.ip = "10.9.39.193" # socket.gethostbyname(socket.gethostname())
+        self.ip = socket.gethostbyname(socket.gethostname()) # "10.9.39.193" #
         self.port = port
         self.timeout = timeout
         self.is_bound = False
@@ -40,7 +40,7 @@ class TCPServer:
         try:
             data = self.client.recv(recv_size)
             return data
-        except BlockingIOError:
+        except (BlockingIOError, TimeoutError):
             return
 
 

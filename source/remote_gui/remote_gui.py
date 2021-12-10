@@ -1,61 +1,13 @@
-from TCPClient import TCPClient
-from communcation_handler import ComHandler
-from Enumerations import LightingModes
-import math
-import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QMainWindow, QComboBox, QLabel, QVBoxLayout, QHBoxLayout, QSizePolicy, QSlider, QLayout, QFrame
-from PyQt5.QtGui import QIcon, QPixmap, QColor, QImage, QPainter, QBrush, QPen
-from PyQt5.QtCore import pyqtSlot, pyqtSignal, QRect, Qt, QSize
+from source.communication.TCPClient import TCPClient
+from source.communication.communcation_handler import ComHandler
+from source.Enumerations import LightingModes, colour_schemes
+from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QMainWindow, \
+    QLabel, QVBoxLayout, QHBoxLayout, QSizePolicy, QSlider, QFrame
+from PyQt5.QtGui import QPixmap, QColor, QImage
+from PyQt5.QtCore import pyqtSlot, pyqtSignal, Qt, QSize
 
 from functools import partial
-
-button_styling = """
-background-color: darkcyan;
-font-family: Helvetica;
-text-align: center;
-border-radius: {};
-"""
-
-nav_bar_button_styling = """
-background:none;
-border:none;
-margin:0;
-padding:0;
-"""
-
-colour_display_styling = """
-background-color: rgba({}, {}, {}, 1);
-color: {};
-font-family: Helvetica;
-font-size: 14pt;
-"""
-
-slider_styling = """
-QSlider::groove:horizontal {
-    border: 0px solid;
-    height: 16px;
-    margin: 0px;
-    border-radius: 8px;
-    background-color: darkgrey;
-}
-QSlider::handle:horizontal {    
-    background-color: darkcyan;
-    border: 0px solid;
-    height: 16px;
-    width: 40px;
-    border-radius: 8px;
-    margin: 0px 0px;
-}"""
-
-colour_sequence_styling = """
-QFrame#{} {{
-    border: {} solid;
-    border-color: darkcyan; 
-    margin: 0pt;
-    padding: -10pt;
-    border-radius: 20px;
-}}
-"""
+import gui_styling
 
 class FakeSocketClient():
     def __init__(self):
@@ -101,7 +53,7 @@ class NavBarWidget(QWidget):
             v_layout = QVBoxLayout()
             label = QPushButton(element)
             label.clicked.connect(partial(self.click_nav_bar, new_mode=i))
-            label.setStyleSheet(nav_bar_button_styling)
+            label.setStyleSheet(gui_styling.nav_bar_button_styling)
             label.setFixedWidth(200)
 
             underline = QLabel()
@@ -148,7 +100,7 @@ class ControlWidget(QWidget):
         self.brightness_control.setMaximumSize(QSize(600, 40))
         self.brightness_control.setMinimumSize(QSize(400, 40))
         self.brightness_control.setSliderPosition(100)
-        self.brightness_control.setStyleSheet(slider_styling)
+        self.brightness_control.setStyleSheet(gui_styling.slider_styling)
         self.brightness_control.valueChanged.connect(self.on_brightness_changed)
 
         self.layout.addWidget(self.brightness_label)
@@ -159,7 +111,7 @@ class ControlWidget(QWidget):
         self.toggle_leds.setMinimumSize(QSize(300, 60))
         self.toggle_leds.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         self.toggle_leds.setText("Stop LEDS")
-        self.toggle_leds.setStyleSheet(button_styling.format("10px"))
+        self.toggle_leds.setStyleSheet(gui_styling.button_styling.format("10px"))
         self.layout.addWidget(self.toggle_leds)
         self.toggle_leds.clicked.connect(self.on_toggle_leds_running)
 
@@ -168,7 +120,7 @@ class ControlWidget(QWidget):
         self.shutdown.setMinimumSize(QSize(300, 60))
         self.shutdown.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         self.shutdown.setText("Shutdown")
-        self.shutdown.setStyleSheet(button_styling.format("10px"))
+        self.shutdown.setStyleSheet(gui_styling.button_styling.format("10px"))
         self.shutdown.clicked.connect(self.on_shutdown_pressed)
         self.layout.addWidget(self.shutdown)
 
@@ -242,7 +194,7 @@ class StaticColourSelectionWidget(QWidget):
         self.colour_display = QLabel("#ffffff")
         self.colour_display.setMinimumSize(QSize(200, 200))
         self.colour_display.setMaximumSize(QSize(200, 200))
-        self.colour_display.setStyleSheet(colour_display_styling.format(255, 255, 255, "black"))
+        self.colour_display.setStyleSheet(gui_styling.colour_display_styling.format(255, 255, 255, "black"))
         self.colour_display.setAlignment(Qt.AlignCenter)
 
         self.layout.addStretch(1)
@@ -255,29 +207,30 @@ class StaticColourSelectionWidget(QWidget):
         colour_code = "#{}{}{}".format(hex(r)[2:], hex(g)[2:], hex(b)[2:])
         text_colour = "white" if (r * g * b)**(1/3) < 150 else "black"
         print((r * g * b)**(1/3))
-        self.colour_display.setStyleSheet(colour_display_styling.format(r, g, b, text_colour))
+        self.colour_display.setStyleSheet(gui_styling.colour_display_styling.format(r, g, b, text_colour))
         self.colour_display.setText(colour_code)
 
 
 class ColourSequenceWidget(QFrame):
 
-    colour_sequence_selected = pyqtSignal(int)
+    colour_sequence_selected = pyqtSignal(str)
 
-    def __init__(self, colour_sequence, sequence_enum):
+    def __init__(self, colour_sequence, sequence_name):
         super(ColourSequenceWidget, self).__init__()
-        self.sequence_enum = sequence_enum
+        self.sequence_name = sequence_name
         self.layout = QHBoxLayout()
         self.layout.setSpacing(0)
+        self.layout.setContentsMargins(0,0,0,0)
         self.setObjectName("sequence_frame")
         self.setLayout(self.layout)
 
-        self.setStyleSheet(colour_sequence_styling.format("sequence_frame", "0px"))
+        self.setStyleSheet(gui_styling.colour_sequence_styling.format("sequence_frame", "0px"))
 
-        self.mousePressEvent = lambda x: self.colour_sequence_selected.emit(self.sequence_enum)
-
+        self.mousePressEvent = lambda x: self.colour_sequence_selected.emit(self.sequence_name)
 
         for colour in colour_sequence:
             box = QLabel()
+            box.setMinimumHeight(50)
             box.setStyleSheet("background-color: rgba({}, {}, {}, 1);".format(colour[0], colour[1], colour[2]))
             self.layout.addWidget(box)
 
@@ -291,20 +244,26 @@ class SequenceSelectionWidget(QWidget):
 
         self.sequence_widgets = []
 
-        for i, sequence in enumerate(colour_sequences):
-            seq_widget = ColourSequenceWidget(sequence, i)
+        for name, sequence in colour_sequences.items():
+            seq_widget = ColourSequenceWidget(sequence, name)
             seq_widget.colour_sequence_selected.connect(self.on_sequence_select)
             self.sequence_widgets.append(seq_widget)
             self.layout.addWidget(seq_widget)
 
         self.layout.addStretch(1)
 
-    @pyqtSlot(int)
+    @pyqtSlot(str)
     def on_sequence_select(self, selected_sequence):
         for seq_widget in self.sequence_widgets:
-            seq_widget.setStyleSheet(colour_sequence_styling.format("sequence_frame", "0px"))
+            if seq_widget.sequence_name == selected_sequence:
+                seq_widget.setStyleSheet(gui_styling.colour_sequence_styling.format("sequence_frame", "5px"))
+            else:
+                seq_widget.setStyleSheet(gui_styling.colour_sequence_styling.format("sequence_frame", "0px"))
 
-        self.sequence_widgets[selected_sequence].setStyleSheet(colour_sequence_styling.format("sequence_frame", "5px"))
+    def get_all_signals(self):
+        # Returns the signals from each of the sequences
+        return [seq_widget.colour_sequence_selected
+                for seq_widget in self.sequence_widgets]
 
 class SpotifyWidget(QWidget):
     spotify_refresh_request = pyqtSignal()
@@ -315,7 +274,7 @@ class SpotifyWidget(QWidget):
         self.layout.setAlignment(Qt.AlignHCenter)
         self.setLayout(self.layout)
 
-        spotify_logo_path = "../images/spotify_logo.png"
+        spotify_logo_path = r"remote_gui\spotify_logo.png"
         self.spotify_logo = QLabel()
         self.spotify_logo.setPixmap(QPixmap(spotify_logo_path))
         self.spotify_logo.mousePressEvent = lambda x: self.spotify_refresh_request.emit()
@@ -340,20 +299,23 @@ class Window(QMainWindow):
         self.mode_widgets = []
 
         # Static mode first ie LightingModes(0)
-        colour_wheel_path = "../images/colour_wheel.png"
+        colour_wheel_path = "remote_gui/colour_wheel.png"
         static_colour_sel = StaticColourSelectionWidget(colour_wheel_path)
         static_colour_sel.colour_wheel.static_colour_selected.connect(self.on_static_colour_select)
         self.mode_widgets.append(static_colour_sel)
         self.overall_layout.addWidget(static_colour_sel)
 
         # Then the sequence mode LightingModes(1)
-        sequence_sel = SequenceSelectionWidget([[[255, 0, 0], [0, 255, 0], [0, 0, 255]], [[255, 255, 0], [0, 255, 255], [255, 0, 255]]])
+        sequence_sel = SequenceSelectionWidget(colour_schemes)
         self.mode_widgets.append(sequence_sel)
         self.overall_layout.addWidget(sequence_sel)
+        for signal in sequence_sel.get_all_signals():
+            signal.connect(self.on_sequence_colour_select)
         sequence_sel.setVisible(False)
 
         # them the spotify widget LightingModes(2)
         spotify_wid = SpotifyWidget()
+        spotify_wid.spotify_refresh_request.connect(self.on_update_spotify)
         self.mode_widgets.append(spotify_wid)
         self.overall_layout.addWidget(spotify_wid)
         spotify_wid.setVisible(False)
@@ -387,6 +349,10 @@ class Window(QMainWindow):
         self.led_state.static_colour = (r,g,b)
         self.handler.set_static_colour((r,g,b))
 
+    @pyqtSlot(str)
+    def on_sequence_colour_select(self, sequence_name):
+        self.handler.set_colour_sequence(sequence_name)
+
     @pyqtSlot(bool)
     def on_toggle_leds_running(self, leds_running):
         print(leds_running)
@@ -416,9 +382,9 @@ class Window(QMainWindow):
         self.handler.shutdown()
 
 if __name__ == '__main__':
-    server_addr = "10.9.39.193"
-    client = TCPClient(server_addr, 1237)
-    # client = FakeSocketClient()
+    server_addr = '192.168.1.146' # "10.9.39.193"
+    # client = TCPClient(server_addr, 1237)
+    client = FakeSocketClient()
     handler = ComHandler(client)
 
     leds_running = True

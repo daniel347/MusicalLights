@@ -29,6 +29,11 @@ class ComHandler():
                    }
         self.send_message(message)
 
+    def set_colour_sequence(self, sequence):
+        message = {"method" : "setColourSequence",
+                   "value" : sequence}
+        self.send_message(message)
+
     def trigger_spotify_update(self):
         message = {"method" : "triggerSpotifyUpdate",
                    "value" : 0}

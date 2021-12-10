@@ -1,17 +1,17 @@
 import json
-from Enumerations import LightingModes
+from Enumerations import LightingModes, colour_schemes
 
 from colour_modes import Colours
-from mood_based_colours import MoodBasedColours, Key
-from music_reactive_mode_handler import MusicReactiveHandler
-from sequence_mode_handler import SequenceHandler
+from mood_based_colours import MoodBasedColours
+from source.mode_handlers.music_reactive_mode_handler import MusicReactiveHandler
+from source.mode_handlers.sequence_mode_handler import SequenceHandler
+from source.mode_handlers.static_mode_handler import StaticHandler
 
-USE_SIM = False
+USE_SIM = True
 PWM_LED = False
-NUM_LEDS = 144
-LEDS_PER_COLOUR = 144
+NUM_LEDS = 5
+LEDS_PER_COLOUR = 5
 
-EXPORT_CREDENTIALS = True
 SPOTIFY_API_DELAY = 5 # s
 
 START_SERVER = True  # Start a server for control over wifi
@@ -20,7 +20,7 @@ READ_CHUNK_SIZE = 1
 # Select a lighting controller
 if USE_SIM:
     from light_strip_sim import LightStripSim
-    controller = LightStripSim(NUM_LEDS)
+    controller = LightStripSim(NUM_LEDS, LEDS_PER_COLOUR)
 elif PWM_LED:
     from light_controller import PwmLedController
     controller = PwmLedController()
@@ -38,13 +38,7 @@ features_thresholds = {"danceability": 0.6,
 colours = Colours(int(NUM_LEDS/LEDS_PER_COLOUR), 0, 255)
 mood_colours = MoodBasedColours(features_thresholds)
 
-# Create handlers for each mode
-music_reactive_handler = MusicReactiveHandler(colours, mood_colours, controller,
-                                              EXPORT_CREDENTIALS)
-
-sequence_handler = SequenceHandler(colours, controller, "")
-
-from TCPServer import TCPServer
+from source.communication.TCPServer import TCPServer
 server = TCPServer(1237)
 print("Listening for client")
 server.listen_for_client()
@@ -54,20 +48,29 @@ server.listen_for_client()
 stop_lights = False
 
 lighting_mode = LightingModes.Static
+
 static_colour = (255, 255, 255)
 master_brightness = 1
 
 server_data = bytearray([])
 json_queue = []
 
-mode_handler = music_reactive_handler  # The handler for the particular mode you are in
 shutdown = False
+
+# Create handlers for each mode
+music_reactive_handler = MusicReactiveHandler(colours, mood_colours, controller)
+static_handler = StaticHandler(colours, controller, static_colour)
+sequence_handler = SequenceHandler(colours, controller, colour_schemes["Rave"], period=0.5)
+
+handlers = {LightingModes.Static: static_handler,
+            LightingModes.Sequence: sequence_handler,
+            LightingModes.MusicReactive: music_reactive_handler}
 
 def read_server_bit():
     global server_data
 
     data = server.receive(1)
-    while (data is not None):
+    while data is not None and len(data) != 0:
         # print("recieved byte {}".format(data[0]))
         server_data.append(int(data[0]))
         if data[0] == 0x00:
@@ -93,7 +96,7 @@ def handle_message(json_dict):
         if json_dict["value"] == 0:
             stop_lights = True
             # Stop any sequence playing and turn off the lights
-            mode_handler.stop_playing()
+            handlers[lighting_mode].stop_playing()
             controller.turn_off_leds()
         else:
             # resume playing by allowing the code for a specific loop to run
@@ -103,7 +106,7 @@ def handle_message(json_dict):
         print("setMode")
         new_mode = LightingModes(json_dict["value"])
         if new_mode != lighting_mode:
-            mode_handler.stop_playing()
+            handlers[lighting_mode].stop_playing()
             lighting_mode = new_mode
 
     elif method == "setBrightness":
@@ -119,6 +122,13 @@ def handle_message(json_dict):
             static_colour = (colour_json["r"], colour_json["g"], colour_json["b"])
         else:
             print("ERROR: Invalid colour provided")
+        static_handler.set_uniform_colour(static_colour)
+
+    elif method == "setColourSequence":
+        print("setColourSequence")
+        sequence_name = json_dict["value"]
+        sequence_handler.colour_scheme = sequence_name
+        sequence_handler.generate_sequence()
 
     elif method == "triggerSpotifyUpdate":
         print("triggerSpotifyUpdate")
@@ -141,16 +151,11 @@ while not shutdown:
     if stop_lights:
         continue
 
-    # Otherwise update the handlers
-    if lighting_mode == LightingModes.MusicReactive:
-        music_reactive_handler.update_handler()
+    # Otherwise update the handler
+    handlers[lighting_mode].update_handler()
 
-    elif lighting_mode == LightingModes.Static:
-        # A simple static light set
-        controller.set_constant_colour(colours.make_uniform_colour_array(static_colour))
-
-    elif lighting_mode == LightingModes.Sequence:
-        sequence_handler.update_handler()
+    if USE_SIM:
+        controller.update_simulation()
 
 
 controller.turn_off_leds()

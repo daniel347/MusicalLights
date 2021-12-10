@@ -1,21 +1,16 @@
-from export_credentials import export_credentials
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 from spotipy import SpotifyClientCredentials
-import numpy as np
 
 import time
 
 
 class MusicReactiveHandler():
 
-    def __init__(self, colours, mood_colours, controller, export_creds=True, api_delay=5):
+    def __init__(self, colours, mood_colours, controller, api_delay=5):
         self.controller = controller
         self.colours = colours
         self.mood_colours = mood_colours
-
-        if export_creds:
-            export_credentials()
 
         self.api_delay = api_delay
 

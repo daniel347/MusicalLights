@@ -27,6 +27,10 @@ class SequenceHandler():
 
     def update_handler(self):
 
+        if self.sequence is None:
+            # Nothing to do yet
+            return
+
         if not self.controller.is_playing_sequence():
             self.controller.start_playing_sequence(self.sequence)
 
