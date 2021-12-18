@@ -25,3 +25,7 @@ colour_schemes = {
     "GreenWhite": np.array([[128, 255, 0], [255, 255, 255]]),
     "BlueWhite": np.array([[0, 51, 255], [255, 255, 255]])
 }
+
+colour_functions = ["colour_change_on_beat",
+                    "colour_fade_on_beat",
+                    "colour_pulse_on_beat"]

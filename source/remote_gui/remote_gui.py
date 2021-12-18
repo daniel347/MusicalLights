@@ -1,8 +1,9 @@
 from source.communication.TCPClient import TCPClient
 from source.communication.communcation_handler import ComHandler
 from source.Enumerations import LightingModes, colour_schemes
+from source import Enumerations
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QMainWindow, \
-    QLabel, QVBoxLayout, QHBoxLayout, QSizePolicy, QSlider, QFrame
+    QLabel, QVBoxLayout, QHBoxLayout, QSizePolicy, QSlider, QFrame, QComboBox
 from PyQt5.QtGui import QPixmap, QColor, QImage
 from PyQt5.QtCore import pyqtSlot, pyqtSignal, Qt, QSize
 
@@ -89,22 +90,18 @@ class ControlWidget(QWidget):
         self.led_state = led_state
 
         self.layout = QVBoxLayout()
-
         self.setLayout(self.layout)
 
-        self.brightness_label = QLabel("Master Brightness")
-        self.brightness_label.setAlignment(Qt.AlignHCenter)
-        self.brightness_label.setFixedHeight(40)
+        self.line = QLabel()
+        self.line.setFixedHeight(3)
+        self.line.setFixedWidth(300)
+        self.line.setStyleSheet("background-color: darkgray;")
+        self.layout.addWidget(self.line, alignment=Qt.AlignHCenter)
 
-        self.brightness_control = QSlider(Qt.Horizontal)
-        self.brightness_control.setMaximumSize(QSize(600, 40))
-        self.brightness_control.setMinimumSize(QSize(400, 40))
-        self.brightness_control.setSliderPosition(100)
-        self.brightness_control.setStyleSheet(gui_styling.slider_styling)
-        self.brightness_control.valueChanged.connect(self.on_brightness_changed)
+        self.brightness_slider = LabelledSlider("Master Brightness", 0, 100, 1)
+        self.brightness_slider.control.valueChanged.connect(self.on_brightness_changed)
 
-        self.layout.addWidget(self.brightness_label)
-        self.layout.addWidget(self.brightness_control)
+        self.layout.addWidget(self.brightness_slider, alignment=Qt.AlignHCenter)
 
         self.toggle_leds = QPushButton()
         self.toggle_leds.setMaximumSize(QSize(500, 60))
@@ -112,7 +109,7 @@ class ControlWidget(QWidget):
         self.toggle_leds.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         self.toggle_leds.setText("Stop LEDS")
         self.toggle_leds.setStyleSheet(gui_styling.button_styling.format("10px"))
-        self.layout.addWidget(self.toggle_leds)
+        self.layout.addWidget(self.toggle_leds, alignment=Qt.AlignHCenter)
         self.toggle_leds.clicked.connect(self.on_toggle_leds_running)
 
         self.shutdown = QPushButton()
@@ -122,11 +119,7 @@ class ControlWidget(QWidget):
         self.shutdown.setText("Shutdown")
         self.shutdown.setStyleSheet(gui_styling.button_styling.format("10px"))
         self.shutdown.clicked.connect(self.on_shutdown_pressed)
-        self.layout.addWidget(self.shutdown)
-
-        self.layout.setAlignment(self.brightness_control, Qt.AlignHCenter)
-        self.layout.setAlignment(self.toggle_leds, Qt.AlignHCenter)
-        self.layout.setAlignment(self.shutdown, Qt.AlignHCenter)
+        self.layout.addWidget(self.shutdown, alignment=Qt.AlignHCenter)
 
     @pyqtSlot()
     def on_toggle_leds_running(self):
@@ -149,18 +142,19 @@ class ControlWidget(QWidget):
 class ColourWheelWidget(QWidget):
     static_colour_selected = pyqtSignal(int, int, int)
 
-    def __init__(self, image_path):
+    def __init__(self):
         super(ColourWheelWidget, self).__init__()
 
         size = 400
         self.setFixedSize(QSize(size, size))
+        colour_wheel_path = "remote_gui/colour_wheel.png"
 
-        self.rgb_colour_wheel_img = QImage(image_path)
+        self.rgb_colour_wheel_img = QImage(colour_wheel_path)
         self.rgb_colour_wheel = QLabel(self)
         self.rgb_colour_wheel.resize(size, size)
 
         self.scale = 456/size
-        self.rgb_colour_wheel.setPixmap(QPixmap(image_path))
+        self.rgb_colour_wheel.setPixmap(QPixmap(colour_wheel_path))
         self.rgb_colour_wheel.setScaledContents(True)
         self.rgb_colour_wheel.mousePressEvent = self.set_static_colour
 
@@ -182,13 +176,13 @@ class ColourWheelWidget(QWidget):
 
 
 class StaticColourSelectionWidget(QWidget):
-    def __init__(self, image_path):
+    def __init__(self):
         super(StaticColourSelectionWidget, self).__init__()
 
         self.layout = QHBoxLayout()
         self.setLayout(self.layout)
 
-        self.colour_wheel = ColourWheelWidget(image_path)
+        self.colour_wheel = ColourWheelWidget()
         self.colour_wheel.static_colour_selected.connect(self.on_static_colour_select)
 
         self.colour_display = QLabel("#ffffff")
@@ -234,7 +228,33 @@ class ColourSequenceWidget(QFrame):
             box.setStyleSheet("background-color: rgba({}, {}, {}, 1);".format(colour[0], colour[1], colour[2]))
             self.layout.addWidget(box)
 
+class LabelledSlider(QWidget):
+
+    def __init__(self, label_name, min_val, max_val, tick_int):
+        super(LabelledSlider, self).__init__()
+        self.layout = QVBoxLayout()
+        self.layout.setSpacing(5)
+        self.setLayout(self.layout)
+
+        self.label = QLabel(label_name)
+        self.label.setAlignment(Qt.AlignHCenter)
+        self.label.setFixedHeight(40)
+
+        self.control = QSlider(Qt.Horizontal)
+        self.control.setMaximumSize(QSize(600, 40))
+        self.control.setMinimumSize(QSize(400, 40))
+        self.control.setMaximum(max_val)
+        self.control.setMinimum(min_val)
+        self.control.setSliderPosition(max_val)
+        self.control.setTickInterval(tick_int)
+        self.control.setStyleSheet(gui_styling.slider_styling)
+
+        self.layout.addWidget(self.label, alignment=Qt.AlignHCenter)
+        self.layout.addWidget(self.control, alignment=Qt.AlignHCenter)
+
 class SequenceSelectionWidget(QWidget):
+    sequence_period_changed = pyqtSignal(int)
+    colour_mode_changed = pyqtSignal(str)
 
     def __init__(self, colour_sequences):
         super(SequenceSelectionWidget, self).__init__()
@@ -252,6 +272,16 @@ class SequenceSelectionWidget(QWidget):
 
         self.layout.addStretch(1)
 
+        self.period_slider = LabelledSlider("Period", 100, 5000, 100)
+        self.period_slider.control.valueChanged.connect(self.on_period_changed)
+        self.layout.addWidget(self.period_slider, alignment=Qt.AlignHCenter)
+
+        self.colour_change_mode = QComboBox()
+        self.colour_change_mode.addItems(Enumerations.colour_functions)
+        self.colour_change_mode.setStyleSheet(gui_styling.mode_selection_styling)
+        self.colour_change_mode.currentIndexChanged.connect(self.on_colour_mode_change)
+        self.layout.addWidget(self.colour_change_mode, alignment=Qt.AlignHCenter)
+
     @pyqtSlot(str)
     def on_sequence_select(self, selected_sequence):
         for seq_widget in self.sequence_widgets:
@@ -264,6 +294,14 @@ class SequenceSelectionWidget(QWidget):
         # Returns the signals from each of the sequences
         return [seq_widget.colour_sequence_selected
                 for seq_widget in self.sequence_widgets]
+
+    @pyqtSlot(int)
+    def on_period_changed(self, period):
+        self.sequence_period_changed.emit(period)
+
+    @pyqtSlot(int)
+    def on_colour_mode_change(self, mode_ind):
+        self.colour_mode_changed.emit(Enumerations.colour_functions[mode_ind])
 
 class SpotifyWidget(QWidget):
     spotify_refresh_request = pyqtSignal()
@@ -299,8 +337,7 @@ class Window(QMainWindow):
         self.mode_widgets = []
 
         # Static mode first ie LightingModes(0)
-        colour_wheel_path = "remote_gui/colour_wheel.png"
-        static_colour_sel = StaticColourSelectionWidget(colour_wheel_path)
+        static_colour_sel = StaticColourSelectionWidget()
         static_colour_sel.colour_wheel.static_colour_selected.connect(self.on_static_colour_select)
         self.mode_widgets.append(static_colour_sel)
         self.overall_layout.addWidget(static_colour_sel)
@@ -312,6 +349,9 @@ class Window(QMainWindow):
         for signal in sequence_sel.get_all_signals():
             signal.connect(self.on_sequence_colour_select)
         sequence_sel.setVisible(False)
+
+        sequence_sel.sequence_period_changed.connect(self.on_sequence_period_changed)
+        sequence_sel.colour_mode_changed.connect(self.on_colour_change_mode_changed)
 
         # them the spotify widget LightingModes(2)
         spotify_wid = SpotifyWidget()
@@ -380,6 +420,14 @@ class Window(QMainWindow):
     @pyqtSlot()
     def on_update_spotify(self):
         self.handler.shutdown()
+
+    @pyqtSlot(int)
+    def on_sequence_period_changed(self, period):
+        self.handler.set_sequence_period(period)
+
+    @pyqtSlot(str)
+    def on_colour_change_mode_changed(self, colour_change_mode):
+        self.handler.set_colour_change_mode(colour_change_mode)
 
 if __name__ == '__main__':
     server_addr = '192.168.1.146' # "10.9.39.193"

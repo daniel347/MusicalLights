@@ -34,6 +34,16 @@ class ComHandler():
                    "value" : sequence}
         self.send_message(message)
 
+    def set_colour_change_mode(self, mode):
+        message = {"method" : "setColourChangeMode",
+                   "value" : mode}
+        self.send_message(message)
+
+    def set_sequence_period(self, period):
+        message = {"method" : "setSequencePeriod",
+                   "value" : period}
+        self.send_message(message)
+
     def trigger_spotify_update(self):
         message = {"method" : "triggerSpotifyUpdate",
                    "value" : 0}
